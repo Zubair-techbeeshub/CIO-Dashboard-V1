@@ -1,0 +1,5 @@
+ID,Title,Severity,Status,Age
+INC-001,SCADA Core Performance Degradation,High,In Progress,2h
+INC-002,Asset Mgmt Database Sync Issue,High,Open,4h
+INC-003,Field App Login Delays,Medium,In Progress,6h
+INC-004,Customer Portal Certificate Warning,Low,Open,1d

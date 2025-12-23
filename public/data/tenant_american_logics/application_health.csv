@@ -1,0 +1,7 @@
+Application,Domain,Availability %,Incidents (90 Days),Patch Compliance %,Status,DownIncidences3Months
+Energy Billing,Customer Tech,99.8,1,96,Green,1
+SCADA Core,Ops Tech,97.2,4,88,Amber,3
+Asset Mgmt,IT Shared,95.5,6,82,Red,5
+Outage Management,Ops Tech,99.5,2,94,Green,2
+Customer Portal,Customer Tech,98.8,3,90,Green,2
+Field Mobility,Ops Tech,96.5,5,85,Amber,4

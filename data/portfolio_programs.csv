@@ -1,0 +1,6 @@
+Program Name,Budget Type,Annual Budget ($M),YTD Actual ($M),Target YTD ($M),Variance %,Status,POC,Top3Issues
+Grid Modernization,Capital,120,68,70,-2.8,Green,John Smith,"Vendor delivery delays|Resource allocation conflicts|Integration testing challenges"
+Cyber Security,O&M,45,38,35,8.5,Amber,Sarah Johnson,"Budget constraints for new tools|Skill gap in cloud security|Third-party audit findings"
+Customer Digital,Capital,60,55,48,14.6,Red,Mike Chen,"Scope creep in mobile features|Customer feedback integration delays|API performance issues"
+Smart Metering,Capital,85,48,50,-4.0,Green,Lisa Anderson,"Hardware procurement lead time|Field installation weather delays|Data validation accuracy"
+Data Analytics,O&M,30,24,23,4.3,Green,David Park,"Data quality and cleansing|Cloud infrastructure costs|Stakeholder alignment on metrics"

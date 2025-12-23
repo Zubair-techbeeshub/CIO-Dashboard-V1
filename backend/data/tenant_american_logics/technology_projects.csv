@@ -1,0 +1,7 @@
+Domain,Project Name,Budget ($M),Actual ($M),Schedule Status,Top Issue,POC
+Ops Tech,Substation Automation,25,22,Green,Vendor delay,John Smith
+Customer Tech,Mobile App Revamp,18,20,Amber,Scope creep,Mike Chen
+IT Services,ERP Upgrade,30,35,Red,Resource shortage,Sarah Johnson
+Ops Tech,Grid Analytics Platform,22,20,Green,None,John Smith
+Customer Tech,Portal Enhancement,15,14,Green,None,Mike Chen
+Security,Firewall Replacement,12,13,Amber,Integration issues,Sarah Johnson

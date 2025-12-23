@@ -1,0 +1,10 @@
+Metric,Value,Unit
+YoYRevenueGrowth,16.2,%
+TotalITSpend,53.4,$M
+ITSpendAsPercentRevenue,4.1,%
+BudgetUtilization,76.3,%
+SystemUptime,99.7,%
+SecurityIncidentsMoM,-8.9,%
+ResponseTimeMin,17,minutes
+CloudSpend,12.1,$M
+CloudCapacityUtilization,33.6,%
