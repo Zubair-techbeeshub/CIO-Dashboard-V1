@@ -4,6 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import re
 from dotenv import load_dotenv
 import os
+from fastapi.staticfiles import StaticFiles
 
 from routers import dashboard, portfolio, workforce, projects, auth, clients
 
@@ -15,6 +16,12 @@ app = FastAPI(
     description="API for CIO Dashboard - Utilities KPIs",
     version="1.0.0"
 )
+
+# Serve raw data CSVs under /data for frontend CSV fetches
+BASE_DIR = os.path.dirname(__file__)
+DATA_DIR = os.path.join(BASE_DIR, "data")
+if os.path.isdir(DATA_DIR):
+    app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
 
 # CORS Configuration
 # Trim whitespace to avoid origin mismatches
