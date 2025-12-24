@@ -9,15 +9,10 @@
       }
     }
   ],
-  "routes": [
-    { "handle": "filesystem" },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "http://100.27.242.56:8000/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/api/(.*)",
+      "destination": "http://100.27.242.56:8000/api/$1"
     }
   ],
   "outputDirectory": "dist"
