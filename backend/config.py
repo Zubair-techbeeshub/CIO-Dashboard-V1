@@ -18,6 +18,9 @@ class Settings:
     DB_NAME = os.getenv("DB_NAME", "cio_dashboard")
     DB_USER = os.getenv("DB_USER", "postgres")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+    # SSL configuration (useful for managed PostgreSQL like YugabyteDB)
+    DB_SSLMODE = os.getenv("DB_SSLMODE", None)  # e.g., "require"
+    DB_SSLROOTCERT = os.getenv("DB_SSLROOTCERT", None)  # optional path to CA cert
     
     # External API configuration
     EXTERNAL_API_URL = os.getenv("EXTERNAL_API_URL", "")
@@ -33,6 +36,14 @@ class Settings:
     
     @property
     def database_url(self):
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        base = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        params = []
+        if self.DB_SSLMODE:
+            params.append(f"sslmode={self.DB_SSLMODE}")
+        if self.DB_SSLROOTCERT:
+            params.append(f"sslrootcert={self.DB_SSLROOTCERT}")
+        if params:
+            return base + "?" + "&".join(params)
+        return base
 
 settings = Settings()

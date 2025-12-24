@@ -14,7 +14,11 @@ from tenant import get_tenant
 router = APIRouter()
 
 # Database connection
-engine = create_engine(settings.database_url)
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    connect_args={"connect_timeout": 10}
+)
 
 # JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
