@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://100.27.242.56:8000/api/$1"
+      "destination": "http://api.techbeeshub.com:8000/api/$1"
     }
   ],
   "outputDirectory": "dist"
