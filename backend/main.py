@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+import re
 from dotenv import load_dotenv
 import os
 
@@ -25,6 +27,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Normalize path middleware to collapse multiple slashes in request paths
+class NormalizePathMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        path = request.scope.get("path", "")
+        normalized = re.sub(r"/\/+", "/", path)
+        if normalized != path:
+            request.scope["path"] = normalized
+        return await call_next(request)
+
+app.add_middleware(NormalizePathMiddleware)
 
 # Include routers
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
