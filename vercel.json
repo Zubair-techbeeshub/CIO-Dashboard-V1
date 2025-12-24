@@ -10,13 +10,10 @@
     }
   ],
   "routes": [
+    { "handle": "filesystem" },
     {
       "src": "/api/(.*)",
       "dest": "http://100.27.242.56:8000/api/$1"
-    },
-    {
-      "src": "/data/(.*)",
-      "dest": "/data/$1"
     },
     {
       "src": "/(.*)",
