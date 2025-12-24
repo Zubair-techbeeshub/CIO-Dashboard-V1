@@ -31,12 +31,13 @@ function getTenantId(): string {
 // Load CSV file
 async function loadCSV(filename: string): Promise<any[]> {
   const tenantId = getTenantId();
-  // Prefer the API base URL from environment for production (HTTPS). If not set, use same-origin path.
-  const apiBase = (import.meta.env.VITE_API_URL as string) || '';
-  const path = `/data/tenant_${tenantId}/${filename}`;
-  const url = apiBase ? `${apiBase}${path}` : path;
+  // Use configured API base URL in production, fall back to our API host
+  const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://api.techbeeshub.com';
+  // Ensure no double-slash
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const url = `${base}/data/tenant_${tenantId}/${filename}`;
   console.log('Loading CSV from:', url);
-  const response = await fetch(url, { credentials: 'same-origin' });
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load ${filename}: ${response.status} ${response.statusText}`);
   }
