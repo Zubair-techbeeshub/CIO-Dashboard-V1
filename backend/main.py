@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.staticfiles import StaticFiles
 import re
 from dotenv import load_dotenv
 import os
-from fastapi.staticfiles import StaticFiles
 
 from routers import dashboard, portfolio, workforce, projects, auth, clients
 
@@ -16,12 +16,6 @@ app = FastAPI(
     description="API for CIO Dashboard - Utilities KPIs",
     version="1.0.0"
 )
-
-# Serve raw data CSVs under /data for frontend CSV fetches
-BASE_DIR = os.path.dirname(__file__)
-DATA_DIR = os.path.join(BASE_DIR, "data")
-if os.path.isdir(DATA_DIR):
-    app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
 
 # CORS Configuration
 # Trim whitespace to avoid origin mismatches
@@ -45,6 +39,13 @@ class NormalizePathMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(NormalizePathMiddleware)
+
+# Serve CSV/static data folder at /data
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
+if os.path.isdir(data_dir):
+    app.mount("/data", StaticFiles(directory=data_dir), name="data")
+else:
+    print(f"Warning: data directory not found at {data_dir}; /data will return 404")
 
 # Include routers
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
