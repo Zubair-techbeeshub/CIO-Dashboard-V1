@@ -35,9 +35,15 @@ async function loadCSV(filename: string): Promise<any[]> {
   const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://api.techbeeshub.com';
   // Ensure no double-slash
   const base = API_BASE_URL.replace(/\/$/, '');
-  const url = `${base}/data/tenant_${tenantId}/${filename}`;
-  console.log('Loading CSV from:', url);
-  const response = await fetch(url);
+  const primary = `${base}/data/tenant_${tenantId}/${filename}`;
+  const fallback = `${base}/data/${tenantId}/${filename}`; // some deployments use /data/{tenant}/
+
+  console.log('Attempting CSV from primary:', primary);
+  let response = await fetch(primary);
+  if (!response.ok) {
+    console.warn('Primary CSV path failed, trying fallback:', fallback, response.status);
+    response = await fetch(fallback);
+  }
   if (!response.ok) {
     throw new Error(`Failed to load ${filename}: ${response.status} ${response.statusText}`);
   }
