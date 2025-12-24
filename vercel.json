@@ -9,11 +9,6 @@
       }
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "http://api.techbeeshub.com:8000/api/$1"
-    }
-  ],
+  
   "outputDirectory": "dist"
 }
