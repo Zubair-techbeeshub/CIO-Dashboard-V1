@@ -9,6 +9,21 @@
       }
     }
   ],
-  
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "http://api.techbeeshub.com:8000/api/$1"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "outputDirectory": "dist"
 }
