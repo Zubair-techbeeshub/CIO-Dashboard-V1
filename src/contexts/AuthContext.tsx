@@ -31,11 +31,7 @@ interface AuthProviderProps {
 }
 
 /* 🔑 API base URL (PRODUCTION SAFE) */
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
-if (!API_BASE_URL) {
-  throw new Error('VITE_API_URL is not defined');
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://api.techbeeshub.com:8000';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
