@@ -41,6 +41,14 @@ async def root():
         "docs": "/docs"
     }
 
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": "CIO Dashboard API",
+        "version": "1.0.0"
+    }
+
 @app.get("/test")
 async def test():
     return {"message": "Test endpoint working"}
