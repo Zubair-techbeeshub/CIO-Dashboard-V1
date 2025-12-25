@@ -1,16 +1,11 @@
 import Papa from 'papaparse';
 
 /* ======================================================
-   Tenant Resolution (FIXED)
+   Tenant Resolution
    ====================================================== */
 
 function getTenantId(): string {
-  const envTenant = import.meta.env.VITE_TENANT_ID;
-  if (envTenant && envTenant.trim()) {
-    return envTenant.trim();
-  }
-
-  return 'american_logics';
+  return import.meta.env.VITE_TENANT_ID || 'american_logics';
 }
 
 /* ======================================================
@@ -24,8 +19,6 @@ async function loadCSV<T = any>(filename: string): Promise<T[]> {
 
   const base = API_BASE_URL.replace(/\/$/, '');
   const url = `${base}/data/${tenantId}/${filename}`;
-
-  console.log('Loading CSV from:', url);
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -46,16 +39,46 @@ async function loadCSV<T = any>(filename: string): Promise<T[]> {
 }
 
 /* ======================================================
-   EXECUTIVE SUMMARY (MATCHES COMPONENT EXPECTATION)
+   CONVERTERS (RESTORED)
+   ====================================================== */
+
+/**
+ * Converts executive_summary.csv
+ */
+export function convertExecutiveSummary(rows: any[]) {
+  return rows.map((r) => ({
+    metric: r.metric,
+    value: r.value,
+    unit: r.unit,
+  }));
+}
+
+/**
+ * Converts project_summary.csv into object expected by UI
+ */
+export function convertProjectSummary(rows: any[]) {
+  return {
+    inProgress: Number(rows.find(r => r.status === 'In Progress')?.count || 0),
+    atRisk: Number(rows.find(r => r.status === 'At Risk')?.count || 0),
+    completed: Number(rows.find(r => r.status === 'Completed')?.count || 0),
+    completionTrend: rows.map(r => ({
+      period: r.period,
+      completed: Number(r.completed || 0),
+    })),
+  };
+}
+
+/* ======================================================
+   EXECUTIVE SUMMARY (UI-COMPATIBLE)
    ====================================================== */
 
 export async function loadExecutiveSummary() {
   const [
-    kpis,
+    executiveRows,
     financials,
     risks,
     initiatives,
-    projectSummary,
+    projectRows,
     vulnerabilityTrend,
   ] = await Promise.all([
     loadCSV('executive_summary.csv'),
@@ -67,17 +90,17 @@ export async function loadExecutiveSummary() {
   ]);
 
   return {
-    kpis,
+    kpis: convertExecutiveSummary(executiveRows),
     financials,
     risks,
     initiatives,
-    projectSummary,
+    projectSummary: convertProjectSummary(projectRows),
     vulnerabilityTrend,
   };
 }
 
 /* ======================================================
-   FINANCIAL SECTION (RESTORED)
+   FINANCIAL SECTION
    ====================================================== */
 
 export async function loadSpendTrend() {
@@ -86,10 +109,6 @@ export async function loadSpendTrend() {
 
 export async function loadSpendCategories() {
   return loadCSV('spend_categories.csv');
-}
-
-export async function loadWorkforceMetrics() {
-  return loadCSV('workforce_metrics.csv');
 }
 
 /* ======================================================
@@ -132,12 +151,16 @@ export async function loadWorkforceSummary() {
   return loadCSV('workforce_summary.csv');
 }
 
+export async function loadWorkforceMetrics() {
+  return loadCSV('workforce_metrics.csv');
+}
+
 export async function loadSkillDistribution() {
   return loadCSV('skill_distribution.csv');
 }
 
 /* ======================================================
-   GENERIC FALLBACK
+   GENERIC
    ====================================================== */
 
 export async function loadAnyCSV(filename: string) {
