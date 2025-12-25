@@ -1,168 +1,250 @@
 import Papa from 'papaparse';
-
-/* ======================================================
-   Tenant Resolution
-   ====================================================== */
-
-function getTenantId(): string {
-  return import.meta.env.VITE_TENANT_ID || 'american_logics';
-}
-
-/* ======================================================
-   Core CSV Loader
-   ====================================================== */
-
-async function loadCSV<T = any>(filename: string): Promise<T[]> {
-  const tenantId = getTenantId();
-  const API_BASE_URL =
-    import.meta.env.VITE_API_URL || 'https://api.techbeeshub.com';
-
-  const base = API_BASE_URL.replace(/\/$/, '');
-  const url = `${base}/data/${tenantId}/${filename}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load ${filename}: ${response.status}`);
+// Get tenant ID from current domain
+ffunction getTenantId(): string {
+  const envTenant = import.meta.env.VITE_TENANT_ID;
+  if (envTenant && envTenant.trim()) {
+    return envTenant.trim();
   }
 
-  const csvText = await response.text();
+  return 'american_logics';
+}
 
+// Load CSV file
+async function loadCSV(filename: string): Promise<any[]> {
+  const tenantId = getTenantId();
+  // Use configured API base URL in production, fall back to our API host
+  const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://api.techbeeshub.com';
+  // Ensure no double-slash
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const primary = `${base}/data/tenant_${tenantId}/${filename}`;
+  const fallback = `${base}/data/${tenantId}/${filename}`; // some deployments use /data/{tenant}/
+
+  console.log('Attempting CSV from primary:', primary);
+  let response = await fetch(primary);
+  if (!response.ok) {
+    console.warn('Primary CSV path failed, trying fallback:', fallback, response.status);
+    response = await fetch(fallback);
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to load ${filename}: ${response.status} ${response.statusText}`);
+  }
+  const csvText = await response.text();
+  console.log('CSV text length:', csvText.length);
   return new Promise((resolve, reject) => {
-    Papa.parse<T>(csvText, {
+    Papa.parse(csvText, {
       header: true,
       dynamicTyping: true,
+      transformHeader: (header) => header.trim(),
       skipEmptyLines: true,
-      complete: (results) => resolve(results.data),
-      error: reject,
+      complete: (results) => {
+        console.log('Parsed data for', filename, ':', results.data.length, 'rows');
+        console.log('Fields:', results.meta.fields);
+        if (results.data.length > 0) {
+          console.log('First row:', results.data[0]);
+        }
+        resolve(results.data);
+      },
+      error: reject
     });
   });
 }
 
-/* ======================================================
-   CONVERTERS (RESTORED)
-   ====================================================== */
+// Data loading functions - Now loading from CSV files directly
+export async function loadExecutiveSummary() {
+  const data = await loadCSV('executive_summary.csv');
+  const metrics: Record<string, any> = {};
+  data.forEach((row: any) => {
+    metrics[row.Metric] = row.Value;
+  });
 
-/**
- * Converts executive_summary.csv
- */
-export function convertExecutiveSummary(rows: any[]) {
-  return rows.map((r) => ({
-    metric: r.metric,
-    value: r.value,
-    unit: r.unit,
+  const projData = await loadCSV('project_summary.csv');
+  const projMetrics: Record<string, any> = {};
+  projData.forEach((row: any) => {
+    projMetrics[row.Metric] = row.Value;
+  });
+
+  const completionData = await loadCSV('project_completion_trend.csv');
+  const vulnData = await loadCSV('vulnerability_trend.csv');
+
+  return {
+    yoyRevenueGrowth: metrics.YoYRevenueGrowth || 0,
+    totalITSpend: metrics.TotalITSpend || 0,
+    itSpendAsPercentRevenue: metrics.ITSpendAsPercentRevenue || 0,
+    budgetUtilization: metrics.BudgetUtilization || 0,
+    systemUptime: metrics.SystemUptime || 0,
+    securityIncidentsMoM: metrics.SecurityIncidentsMoM || 0,
+    responseTimeMin: metrics.ResponseTimeMin || 0,
+    cloudSpend: metrics.CloudSpend || 0,
+    cloudCapacityUtilization: metrics.CloudCapacityUtilization || 0,
+    projectSummary: {
+      inProgress: projMetrics.InProgress || 0,
+      atRisk: projMetrics.AtRisk || 0,
+      completed: projMetrics.Completed || 0,
+      completionTrend: completionData.map((row: any) => ({
+        Month: row.Month,
+        Completed: row.Completed
+      }))
+    },
+    vulnerabilityTrend: vulnData.map((row: any) => ({
+      Month: row.Month,
+      Count: row.Count
+    }))
+  };
+}
+
+export async function loadProjectSummary() {
+  const data = await loadCSV('project_summary.csv');
+  return data.map((row: any) => ({
+    Metric: row.Metric,
+    Value: row.Value
   }));
 }
 
-/**
- * Converts project_summary.csv into object expected by UI
- */
-export function convertProjectSummary(rows: any[]) {
-  return {
-    inProgress: Number(rows.find(r => r.status === 'In Progress')?.count || 0),
-    atRisk: Number(rows.find(r => r.status === 'At Risk')?.count || 0),
-    completed: Number(rows.find(r => r.status === 'Completed')?.count || 0),
-    completionTrend: rows.map(r => ({
-      period: r.period,
-      completed: Number(r.completed || 0),
-    })),
-  };
+export async function loadProjectCompletionTrend() {
+  const data = await loadCSV('project_completion_trend.csv');
+  return data.map((row: any) => ({
+    Month: row.Month,
+    Completed: row.Completed
+  }));
 }
 
-/* ======================================================
-   EXECUTIVE SUMMARY (UI-COMPATIBLE)
-   ====================================================== */
-
-export async function loadExecutiveSummary() {
-  const [
-    executiveRows,
-    financials,
-    risks,
-    initiatives,
-    projectRows,
-    vulnerabilityTrend,
-  ] = await Promise.all([
-    loadCSV('executive_summary.csv'),
-    loadCSV('financial_summary.csv'),
-    loadCSV('risk_summary.csv'),
-    loadCSV('key_initiatives.csv'),
-    loadCSV('project_summary.csv'),
-    loadCSV('vulnerability_trend.csv'),
-  ]);
-
-  return {
-    kpis: convertExecutiveSummary(executiveRows),
-    financials,
-    risks,
-    initiatives,
-    projectSummary: convertProjectSummary(projectRows),
-    vulnerabilityTrend,
-  };
-}
-
-/* ======================================================
-   FINANCIAL SECTION
-   ====================================================== */
-
-export async function loadSpendTrend() {
-  return loadCSV('spend_trend.csv');
-}
-
-export async function loadSpendCategories() {
-  return loadCSV('spend_categories.csv');
-}
-
-/* ======================================================
-   PORTFOLIO
-   ====================================================== */
-
-export async function loadPortfolioOverview() {
-  return loadCSV('portfolio_overview.csv');
-}
-
-export async function loadPortfolioProjects() {
-  return loadCSV('portfolio_projects.csv');
+export async function loadVulnerabilityTrend() {
+  const data = await loadCSV('vulnerability_trend.csv');
+  return data.map((row: any) => ({
+    Month: row.Month,
+    Count: row.Count
+  }));
 }
 
 export async function loadPortfolioPrograms() {
-  return loadCSV('portfolio_programs.csv');
+  const data = await loadCSV('portfolio_programs.csv');
+  return convertPortfolioPrograms(data);
 }
 
 export async function loadApplicationHealth() {
-  return loadCSV('application_health.csv');
+  const data = await loadCSV('application_health.csv');
+  return convertApplicationHealth(data);
 }
-
-/* ======================================================
-   PROJECTS
-   ====================================================== */
 
 export async function loadTechnologyProjects() {
-  return loadCSV('technology_projects.csv');
-}
-
-export async function loadDeliveryPerformance() {
-  return loadCSV('delivery_performance.csv');
-}
-
-/* ======================================================
-   WORKFORCE
-   ====================================================== */
-
-export async function loadWorkforceSummary() {
-  return loadCSV('workforce_summary.csv');
+  const data = await loadCSV('technology_projects.csv');
+  return convertTechnologyProjects(data);
 }
 
 export async function loadWorkforceMetrics() {
-  return loadCSV('workforce_metrics.csv');
+  const data = await loadCSV('workforce_metrics.csv');
+  return convertWorkforceMetrics(data);
+}
+
+export async function loadDeliveryPerformance() {
+  const data = await loadCSV('delivery_performance.csv');
+  return convertDeliveryPerformance(data);
+}
+
+export async function loadSpendTrend() {
+  return await loadCSV('monthly_spend_trend.csv');
+}
+
+export async function loadSpendCategories() {
+  return await loadCSV('spend_categories.csv');
+}
+
+export async function loadActiveIncidents() {
+  return await loadCSV('active_incidents.csv');
 }
 
 export async function loadSkillDistribution() {
-  return loadCSV('skill_distribution.csv');
+  return await loadCSV('skills_distribution.csv');
 }
 
-/* ======================================================
-   GENERIC
-   ====================================================== */
+// Helper functions to convert API data to component-friendly format
+export function convertExecutiveSummary(data: any) {
+  return {
+    yoyRevenueGrowth: data.yoyRevenueGrowth || 0,
+    totalITSpend: data.totalITSpend || 0,
+    itSpendAsPercentRevenue: data.itSpendAsPercentRevenue || 0,
+    budgetUtilization: data.budgetUtilization || 0,
+    systemUptime: data.systemUptime || 0,
+    securityIncidentsMoM: data.securityIncidentsMoM || 0,
+    responseTimeMin: data.responseTimeMin || 0,
+    cloudSpend: data.cloudSpend || 0,
+    cloudCapacityUtilization: data.cloudCapacityUtilization || 0,
+  };
+}
 
-export async function loadAnyCSV(filename: string) {
-  return loadCSV(filename);
+export function convertProjectSummary(summaryData: any[], trendData: any[]) {
+  const metrics: Record<string, number> = {};
+  summaryData.forEach(item => {
+    metrics[item.Metric] = item.Value;
+  });
+  
+  return {
+    inProgress: metrics.InProgress || 0,
+    atRisk: metrics.AtRisk || 0,
+    completed: metrics.Completed || 0,
+    completionTrendByMonth: trendData.map(item => ({
+      month: item.Month || item.month,
+      completed: item.Completed || item.completed
+    }))
+  };
+}
+
+export function convertPortfolioPrograms(data: any[]) {
+  return data.map(item => ({
+    programName: item['Program Name'],
+    budgetType: item['Budget Type'],
+    annualBudget: item['Annual Budget ($M)'],
+    ytdActual: item['YTD Actual ($M)'],
+    targetYtd: item['Target YTD ($M)'],
+    variance: item['Variance %'] || item['Variance%'] || item.Variance || 0,
+    status: item.Status,
+    poc: item.POC,
+    top3Issues: item.Top3Issues ? item.Top3Issues.split('|').map((s: string) => s.trim()) : []
+  }));
+}
+
+export function convertApplicationHealth(data: any[]) {
+  return data.map(item => ({
+    application: item.Application,
+    domain: item.Domain,
+    availability: item['Availability %'],
+    incidents: item['Incidents (90 Days)'],
+    patchCompliance: item['Patch Compliance %'],
+    status: item.Status,
+    downIncidences3Months: item.DownIncidences3Months
+  }));
+}
+
+export function convertTechnologyProjects(data: any[]) {
+  return data.map(item => ({
+    domain: item.Domain,
+    projectName: item['Project Name'],
+    budget: item['Budget ($M)'],
+    actual: item['Actual ($M)'],
+    scheduleStatus: item['Schedule Status'],
+    topIssue: item['Top Issue'],
+    poc: item.POC
+  }));
+}
+
+export function convertWorkforceMetrics(data: any[]) {
+  return data.map(item => ({
+    resourceType: item['Resource Type'],
+    plannedHours: item['Planned Hours'],
+    actualHours: item['Actual Hours'],
+    variancePercent: item['Variance %'],
+    openPositions: item['Open Positions'],
+    utilizationRate: item.UtilizationRate
+  }));
+}
+
+export function convertDeliveryPerformance(data: any[]) {
+  return data.map(item => ({
+    project: item.Project,
+    milestonesOnTime: item['Milestones On-Time %'],
+    scopeChanges90Days: item['Scope Changes (90 Days)'],
+    budgetBurn: item['Budget Burn %'],
+    hoursBurn: item['Hours Burn %'],
+    avgDaysProcurementToWA: item.AvgDaysProcurementToWA
+  }));
 }
