@@ -3,26 +3,35 @@ import Papa from 'papaparse';
 function getTenantId(): string {
   const hostname = window.location.hostname;
 
-  // Prefer build-time tenant ID if set
+  // 1. Highest priority: build-time tenant (explicit)
   const buildTenant = (import.meta as any).env?.VITE_TENANT_ID;
   if (buildTenant) {
     return buildTenant;
   }
 
-  // For local development
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  // 2. Known deployments → force american_logics
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.includes('vercel.app') ||
+    hostname === 'cio-dashboard.techbeeshub.com'
+  ) {
     return 'american_logics';
   }
 
-  // For Vercel preview deployments
-  if (hostname.includes('vercel-preview')) {
-    return 'american_logics';
+  // 3. FUTURE: real multi-tenant via subdomain
+  // client1.techbeeshub.com → client1
+  const parts = hostname.split('.');
+  if (parts.length >= 3 && parts[0] !== 'www') {
+    return parts[0]
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
   }
 
-  // For production Vercel deployment (cio-dashboard.techbeeshub.com)
-  if (hostname === 'cio-dashboard.techbeeshub.com' || hostname.includes('vercel.app')) {
-    return 'american_logics';
-  }
+  // 4. Safe fallback
+  return 'american_logics';
+}
+
 
   // Extract tenant from subdomain (e.g., client1.yourdomain.com -> client1)
   const parts = hostname.split('.');
