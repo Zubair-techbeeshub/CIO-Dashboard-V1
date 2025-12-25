@@ -1,35 +1,15 @@
 import Papa from 'papaparse';
 
 /* ======================================================
-   Tenant Resolution
+   Tenant Resolution (FIXED)
    ====================================================== */
 
 function getTenantId(): string {
-  const hostname = window.location.hostname;
-
-  // 1️⃣ Explicit env override (best)
   const envTenant = import.meta.env.VITE_TENANT_ID;
   if (envTenant && envTenant.trim()) {
     return envTenant.trim();
   }
 
-  // 2️⃣ Known deployments → single tenant
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.endsWith('.vercel.app') ||
-    hostname === 'cio-dashboard.techbeeshub.com'
-  ) {
-    return 'american_logics';
-  }
-
-  // 3️⃣ Future multi-tenant support
-  const parts = hostname.split('.');
-  if (parts.length >= 3 && parts[0] !== 'www') {
-    return parts[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-  }
-
-  // 4️⃣ Absolute fallback
   return 'american_logics';
 }
 
@@ -39,7 +19,6 @@ function getTenantId(): string {
 
 async function loadCSV<T = any>(filename: string): Promise<T[]> {
   const tenantId = getTenantId();
-
   const API_BASE_URL =
     import.meta.env.VITE_API_URL || 'https://api.techbeeshub.com';
 
@@ -67,7 +46,7 @@ async function loadCSV<T = any>(filename: string): Promise<T[]> {
 }
 
 /* ======================================================
-   Executive Summary (MULTIPLE CSVs)
+   EXECUTIVE SUMMARY (MATCHES COMPONENT EXPECTATION)
    ====================================================== */
 
 export async function loadExecutiveSummary() {
@@ -76,11 +55,15 @@ export async function loadExecutiveSummary() {
     financials,
     risks,
     initiatives,
+    projectSummary,
+    vulnerabilityTrend,
   ] = await Promise.all([
     loadCSV('executive_summary.csv'),
     loadCSV('financial_summary.csv'),
     loadCSV('risk_summary.csv'),
     loadCSV('key_initiatives.csv'),
+    loadCSV('project_summary.csv'),
+    loadCSV('vulnerability_trend.csv'),
   ]);
 
   return {
@@ -88,11 +71,29 @@ export async function loadExecutiveSummary() {
     financials,
     risks,
     initiatives,
+    projectSummary,
+    vulnerabilityTrend,
   };
 }
 
 /* ======================================================
-   Portfolio
+   FINANCIAL SECTION (RESTORED)
+   ====================================================== */
+
+export async function loadSpendTrend() {
+  return loadCSV('spend_trend.csv');
+}
+
+export async function loadSpendCategories() {
+  return loadCSV('spend_categories.csv');
+}
+
+export async function loadWorkforceMetrics() {
+  return loadCSV('workforce_metrics.csv');
+}
+
+/* ======================================================
+   PORTFOLIO
    ====================================================== */
 
 export async function loadPortfolioOverview() {
@@ -103,32 +104,40 @@ export async function loadPortfolioProjects() {
   return loadCSV('portfolio_projects.csv');
 }
 
+export async function loadPortfolioPrograms() {
+  return loadCSV('portfolio_programs.csv');
+}
+
+export async function loadApplicationHealth() {
+  return loadCSV('application_health.csv');
+}
+
 /* ======================================================
-   Workforce
+   PROJECTS
+   ====================================================== */
+
+export async function loadTechnologyProjects() {
+  return loadCSV('technology_projects.csv');
+}
+
+export async function loadDeliveryPerformance() {
+  return loadCSV('delivery_performance.csv');
+}
+
+/* ======================================================
+   WORKFORCE
    ====================================================== */
 
 export async function loadWorkforceSummary() {
   return loadCSV('workforce_summary.csv');
 }
 
-export async function loadWorkforceSkills() {
-  return loadCSV('workforce_skills.csv');
+export async function loadSkillDistribution() {
+  return loadCSV('skill_distribution.csv');
 }
 
 /* ======================================================
-   Projects
-   ====================================================== */
-
-export async function loadProjectsSummary() {
-  return loadCSV('projects_summary.csv');
-}
-
-export async function loadProjectsTimeline() {
-  return loadCSV('projects_timeline.csv');
-}
-
-/* ======================================================
-   Utilities / Helpers
+   GENERIC FALLBACK
    ====================================================== */
 
 export async function loadAnyCSV(filename: string) {
