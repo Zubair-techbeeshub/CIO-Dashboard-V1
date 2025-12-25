@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 // Get tenant ID from current domain
-ffunction getTenantId(): string {
+function getTenantId(): string {
   const envTenant = import.meta.env.VITE_TENANT_ID;
   if (envTenant && envTenant.trim()) {
     return envTenant.trim();
