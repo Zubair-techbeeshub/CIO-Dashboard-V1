@@ -3,6 +3,12 @@ import Papa from 'papaparse';
 function getTenantId(): string {
   const hostname = window.location.hostname;
 
+  // Prefer build-time tenant ID if set
+  const buildTenant = (import.meta as any).env?.VITE_TENANT_ID;
+  if (buildTenant) {
+    return buildTenant;
+  }
+
   // For local development
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'american_logics';
@@ -13,8 +19,8 @@ function getTenantId(): string {
     return 'american_logics';
   }
 
-  // For production Vercel deployment
-  if (hostname.includes('vercel.app')) {
+  // For production Vercel deployment (cio-dashboard.techbeeshub.com)
+  if (hostname === 'cio-dashboard.techbeeshub.com' || hostname.includes('vercel.app')) {
     return 'american_logics';
   }
 
