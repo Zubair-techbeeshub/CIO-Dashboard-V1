@@ -1,6 +1,83 @@
 # CIO Dashboard Deployment Guide
 
-This guide covers deploying the CIO Dashboard with frontend on Vercel and backend on a separate hosting service.
+This guide covers multiple deployment options for the CIO Dashboard. Choose the option that best fits your needs:
+
+- **[Google Cloud Platform (GCP)](#-google-cloud-platform-gcp-deployment-recommended)** - Recommended for production (Cloud Run + Firebase)
+- **[Vercel + Backend Service](#-frontend-deployment-vercel)** - Original deployment option
+- **[Railway/Heroku/DigitalOcean](#-backend-deployment)** - Alternative backend options
+
+---
+
+## 🌟 Google Cloud Platform (GCP) Deployment (RECOMMENDED)
+
+Deploy to GCP using Cloud Run for the backend and Firebase Hosting for the frontend.
+
+### Why GCP?
+
+- ✅ **One-command deployment** for both backend and frontend
+- ✅ **Auto-scaling** based on traffic
+- ✅ **Cost-effective** with scale-to-zero ($0-5/month for dev, ~$60-130/month for production)
+- ✅ **No infrastructure management** required
+- ✅ **Built-in PostgreSQL** in container (auto-initialized)
+- ✅ **Fast deployment** (5-10 minutes)
+
+### Quick Start
+
+```bash
+# 1. Enable GCP services
+./deploy/enable-services.sh
+
+# 2. Deploy everything (backend + frontend)
+./deploy/deploy-all.sh YOUR_PROJECT_ID
+
+# Or deploy separately:
+./deploy/deploy-backend.sh YOUR_PROJECT_ID
+./deploy/deploy-frontend.sh https://your-backend-url.run.app
+```
+
+### Complete Documentation
+
+For detailed GCP deployment instructions, see:
+- **[📖 Manual Deployment Guide](docs/MANUAL_DEPLOYMENT_GCP.md)** - Step-by-step deployment
+- **[💰 Cost Estimates](docs/GCP_COST_ESTIMATE.md)** - Detailed pricing breakdown
+- **[⚙️ Configuration Guide](docs/CLOUD_RUN_CONFIGURATION.md)** - Cloud Run settings
+- **[🔧 Troubleshooting](docs/TROUBLESHOOTING_GCP.md)** - Common issues and solutions
+- **[🚀 Migration Guide](docs/MIGRATION_EC2_TO_GCP.md)** - Migrate from EC2 to GCP
+
+### Quick Reference
+
+**Deploy backend:**
+```bash
+./deploy/deploy-backend.sh YOUR_PROJECT_ID [REGION]
+```
+
+**Deploy frontend:**
+```bash
+./deploy/deploy-frontend.sh BACKEND_URL [PROJECT_ID]
+```
+
+**Test deployment:**
+```bash
+./deploy/test-backend.sh https://your-backend.run.app
+./deploy/test-frontend.sh https://your-project.web.app
+```
+
+### Cost Comparison
+
+| Environment | Monthly Cost |
+|-------------|--------------|
+| Development (scale-to-zero) | $0-5 |
+| Production (optimized) | $60-70 |
+| Production (high-performance) | $130-150 |
+| Current EC2/Vercel | $66-86 |
+
+**Savings:** $15-80/month vs EC2, with better scalability!
+
+---
+
+## 🚀 Frontend Deployment (Vercel)
+
+Alternative to Firebase Hosting (if not using GCP).
 
 ## 🚀 Frontend Deployment (Vercel)
 
