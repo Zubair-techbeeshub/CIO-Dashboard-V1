@@ -7,6 +7,31 @@ A comprehensive executive dashboard for Chief Information Officers, providing re
 - **Project Delivery Performance**: Project status, timeline tracking, and risk management
 - **Workforce Productivity**: Team utilization, skills distribution, and resource allocation
 
+## 🚀 Quick Deployment
+
+### Deploy to Google Cloud Platform (Recommended)
+
+One-command deployment to GCP using Cloud Run and Firebase:
+
+```bash
+# 1. Enable services
+./deploy/enable-services.sh
+
+# 2. Deploy everything
+./deploy/deploy-all.sh YOUR_PROJECT_ID
+```
+
+**Cost:** $0-5/month (development) or $60-130/month (production)
+
+📖 **[Complete GCP Deployment Guide](docs/MANUAL_DEPLOYMENT_GCP.md)**
+
+### Alternative Deployment Options
+
+- **Vercel + Railway/Heroku**: See [DEPLOYMENT.md](DEPLOYMENT.md)
+- **AWS EC2**: See [MIGRATION_EC2_TO_GCP.md](docs/MIGRATION_EC2_TO_GCP.md)
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -158,6 +183,29 @@ See `data/EXCEL_WORKFLOW.md` for:
 - Custom alert configuration
 - Role-based access control
 - Mobile responsiveness improvements
+
+## 📚 Documentation
+
+### Deployment Guides
+- **[GCP Deployment (Recommended)](docs/MANUAL_DEPLOYMENT_GCP.md)** - Deploy to Cloud Run + Firebase
+- **[Vercel/Railway Deployment](DEPLOYMENT.md)** - Alternative deployment options
+- **[EC2 to GCP Migration](docs/MIGRATION_EC2_TO_GCP.md)** - Migrate from AWS to GCP
+
+### Configuration & Cost
+- **[Cloud Run Configuration](docs/CLOUD_RUN_CONFIGURATION.md)** - Understanding Cloud Run settings
+- **[GCP Cost Estimates](docs/GCP_COST_ESTIMATE.md)** - Detailed pricing breakdown
+- **[Troubleshooting GCP](docs/TROUBLESHOOTING_GCP.md)** - Common issues and solutions
+
+### Setup Guides
+- **[Full-Stack Setup](FULLSTACK_SETUP.md)** - Local development setup
+- **[YugabyteDB Setup](YUGABYTEDB_SETUP.md)** - Database configuration
+- **[Authentication Setup](AUTH_SETUP.md)** - User authentication
+- **[Multi-Tenant Deployment](MULTI_TENANT_DEPLOYMENT.md)** - Multi-client setup
+
+### Data Management
+- **[Excel Workflow](data/EXCEL_WORKFLOW.md)** - Excel integration guide
+- **[Excel Templates](data/EXCEL_TEMPLATE.md)** - Data templates
+- **[Excel Formulas](data/EXCEL_FORMULAS.md)** - Calculation formulas
 
 ## License
 
