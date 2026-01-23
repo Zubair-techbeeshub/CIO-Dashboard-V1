@@ -1,103 +1,53 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Cloud Run container initialization..."
+echo "========================================"
+echo "  CIO Dashboard Backend Startup"
+echo "========================================"
+echo "PORT: ${PORT:-8080}"
+echo "DB_NAME: ${DB_NAME}"
+echo "ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}"
 
-# PostgreSQL configuration
-POSTGRES_VERSION=15
-PGDATA=/var/lib/postgresql/data
-POSTGRES_CONF=/etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
-DB_NAME=${DB_NAME:-cio_dashboard}
-DB_USER=${DB_USER:-postgres}
-DB_PASSWORD=${DB_PASSWORD:-postgres}
+PG_VERSION=$(ls /usr/lib/postgresql/ | head -1)
+PG_BIN="/usr/lib/postgresql/${PG_VERSION}/bin"
+echo "PostgreSQL version: ${PG_VERSION}"
 
-# Function to wait for PostgreSQL to be ready
-wait_for_postgres() {
-    echo "⏳ Waiting for PostgreSQL to be ready..."
-    for i in {1..30}; do
-        if su - postgres -c "psql -U $DB_USER -d postgres -c 'SELECT 1'" &>/dev/null; then
-            echo "✅ PostgreSQL is ready!"
-            return 0
-        fi
-        echo "   Attempt $i/30: PostgreSQL not ready yet..."
-        sleep 2
-    done
-    echo "❌ PostgreSQL failed to start"
-    return 1
-}
-
-# Initialize PostgreSQL data directory if it doesn't exist
-if [ ! -d "$PGDATA/base" ]; then
-    echo "📦 Initializing PostgreSQL data directory..."
-    su - postgres -c "/usr/lib/postgresql/$POSTGRES_VERSION/bin/initdb -D $PGDATA"
+if [ ! -d "/var/lib/postgresql/data/base" ]; then
+    echo "Initializing PostgreSQL..."
+    mkdir -p /var/lib/postgresql/data
+    chown -R postgres:postgres /var/lib/postgresql/data
+    chmod 700 /var/lib/postgresql/data
     
-    # Configure PostgreSQL for local access
-    echo "🔧 Configuring PostgreSQL..."
-    cat >> $PGDATA/pg_hba.conf <<EOF
-# Allow local connections
-local   all             all                                     trust
-host    all             all             127.0.0.1/32            trust
-host    all             all             ::1/128                 trust
-EOF
+    su - postgres -c "${PG_BIN}/initdb -D /var/lib/postgresql/data"
     
-    # Update PostgreSQL configuration for Cloud Run
-    cat >> $PGDATA/postgresql.conf <<EOF
-# Cloud Run optimizations
-max_connections = 100
-shared_buffers = 256MB
-effective_cache_size = 1GB
-maintenance_work_mem = 64MB
-checkpoint_completion_target = 0.9
-wal_buffers = 16MB
-default_statistics_target = 100
-random_page_cost = 1.1
-effective_io_concurrency = 200
-work_mem = 2621kB
-min_wal_size = 1GB
-max_wal_size = 4GB
-EOF
+    echo "host all all 0.0.0.0/0 md5" >> /var/lib/postgresql/data/pg_hba.conf
+    echo "listen_addresses = '*'" >> /var/lib/postgresql/data/postgresql.conf
     
-    echo "✅ PostgreSQL initialized successfully"
-fi
-
-# Start PostgreSQL temporarily for database setup
-echo "🔄 Starting PostgreSQL for initial setup..."
-su - postgres -c "/usr/lib/postgresql/$POSTGRES_VERSION/bin/pg_ctl -D $PGDATA -l /var/log/postgresql/setup.log start"
-
-# Wait for PostgreSQL to be ready
-wait_for_postgres
-
-# Create database if it doesn't exist
-echo "📊 Setting up database: $DB_NAME..."
-su - postgres -c "psql -U $DB_USER -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'\" | grep -q 1 || psql -U $DB_USER -d postgres -c \"CREATE DATABASE $DB_NAME\""
-
-# Set password for postgres user
-su - postgres -c "psql -U $DB_USER -d postgres -c \"ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD'\""
-
-# Run database schema if file exists
-if [ -f /app/database_schema.sql ]; then
-    echo "📋 Running database schema..."
-    su - postgres -c "psql -U $DB_USER -d $DB_NAME -f /app/database_schema.sql" 2>&1 | grep -v "already exists" || true
-    echo "✅ Database schema applied"
+    su - postgres -c "${PG_BIN}/pg_ctl -D /var/lib/postgresql/data -l /tmp/postgres.log start"
+    
+    echo "Waiting for PostgreSQL..."
+    sleep 10
+    
+    echo "Creating database..."
+    su - postgres -c "${PG_BIN}/psql -c \"CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';\""
+    su - postgres -c "${PG_BIN}/psql -c \"CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};\""
+    su - postgres -c "${PG_BIN}/psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};\""
+    
+    echo "Running migrations..."
+    if [ -d "/docker-entrypoint-initdb.d" ]; then
+        for f in /docker-entrypoint-initdb.d/*.sql; do
+            if [ -f "$f" ]; then
+                echo "Executing: $(basename $f)"
+                su - postgres -c "${PG_BIN}/psql -U ${DB_USER} -d ${DB_NAME} -f $f"
+            fi
+        done
+    fi
+    
+    su - postgres -c "${PG_BIN}/pg_ctl -D /var/lib/postgresql/data stop"
+    sleep 2
 else
-    echo "⚠️  Warning: database_schema.sql not found, skipping schema setup"
+    echo "PostgreSQL already initialized"
 fi
 
-# Run setup_database.py if it exists
-if [ -f /app/setup_database.py ]; then
-    echo "🔧 Running setup_database.py..."
-    cd /app
-    su - app -c "cd /app && python setup_database.py" || echo "⚠️  setup_database.py encountered issues (may be expected)"
-else
-    echo "ℹ️  setup_database.py not found, skipping"
-fi
-
-# Stop temporary PostgreSQL
-echo "🛑 Stopping temporary PostgreSQL..."
-su - postgres -c "/usr/lib/postgresql/$POSTGRES_VERSION/bin/pg_ctl -D $PGDATA stop"
-
-echo "✅ Database initialization complete!"
-echo "🚀 Starting supervisord to manage PostgreSQL and FastAPI..."
-
-# Start supervisord to manage both services
+echo "Starting supervisord..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
