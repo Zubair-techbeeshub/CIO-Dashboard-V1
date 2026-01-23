@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "start": "node server.js",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "serve": "vite preview --port 3000 --open"
@@ -14,6 +15,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react-router-dom": "^5.3.3",
     "dom-helpers": "^6.0.1",
+    "express": "^5.2.1",
     "lucide-react": "^0.294.0",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
