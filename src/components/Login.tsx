@@ -100,7 +100,7 @@ const Login: React.FC = () => {
         </form>
 
         <div className="login-footer">
-          <p>© American Logics. All rights reserved.</p>
+          <p>© 2026 American Logics. All rights reserved.</p>
         </div>
       </div>
     </div>
