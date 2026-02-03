@@ -6,7 +6,7 @@ runConfig:
 
 env:
   - variable: VITE_API_URL
-    value: https://cio-backend-379972122001.us-central1.run.app
+    value: https://cio-backend-4146576402.us-central1.run.app
     availability:
       - BUILD
       
