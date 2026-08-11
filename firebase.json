@@ -1,4 +1,7 @@
 {
+  "projects": {
+    "default": "cio-dashboard-app"
+  },
   "hosting": {
     "public": "dist",
     "ignore": [

@@ -24,8 +24,12 @@ const WorkforceSection: React.FC = () => {
         console.log('Workforce Metrics Response:', workforceResponse);
         console.log('Skill Distribution Response:', skillsResponse);
 
-        setWorkforceMetrics(workforceResponse.data || workforceResponse);
-        setSkillDistribution(skillsResponse.data || skillsResponse);
+        // Handle both response formats: { data: [...] } or direct array
+        const workforceData = Array.isArray(workforceResponse) ? workforceResponse : (workforceResponse?.data || []);
+        const skillsData = Array.isArray(skillsResponse) ? skillsResponse : (skillsResponse?.data || []);
+
+        setWorkforceMetrics(workforceData);
+        setSkillDistribution(skillsData);
         setLoading(false);
       } catch (error) {
         console.error('Error loading workforce data:', error);
@@ -205,7 +209,7 @@ const WorkforceSection: React.FC = () => {
               labelStyle={{ color: '#fff' }}
             />
             <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-              {skillDistribution.map((item, index) => (
+              {skillDistribution.map((_, index) => (
                 <Cell key={`skill-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>

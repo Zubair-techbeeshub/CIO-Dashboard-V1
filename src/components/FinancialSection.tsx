@@ -234,7 +234,7 @@ const FinancialSection: React.FC = () => {
                 fill="#8884d8"
                 dataKey="spend"
               >
-                {spendCategories.map((item, index) => (
+                {spendCategories.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
