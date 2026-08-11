@@ -1,34 +1,41 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/FirebaseAuthContext';
+import './Login.css';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login, isLoading } = useAuth();
-
-  // Get tenant from environment or URL
-  const tenantId = import.meta.env.VITE_TENANT_ID ||
-                   window.location.hostname.split('.')[0] ||
-                   'american_logics';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       await login(email, password);
-
-      // Navigate to the page they were trying to access, or dashboard
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('User not found. Please check your email.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Incorrect password. Please try again.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('This account has been disabled.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,72 +43,43 @@ const Login: React.FC = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo">
-            <LogIn size={32} />
-          </div>
           <h1>CIO Dashboard</h1>
-          <p className="login-subtitle">Sign in to your account</p>
-          <div className="tenant-badge">
-            Tenant: {tenantId.replace('_', ' ').toUpperCase()}
-          </div>
+          <p className="subtitle">American Logics</p>
         </div>
-
+        
         <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="error-message">
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          )}
-
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <input
-              type="email"
               id="email"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
-              disabled={isLoading}
+              disabled={loading}
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <div className="password-input">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              disabled={loading}
+            />
           </div>
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing In...' : 'Sign In'}
+          {error && <div className="error-message">{error}</div>}
+
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p>© 2026 American Logics. All rights reserved.</p>
-        </div>
       </div>
     </div>
   );

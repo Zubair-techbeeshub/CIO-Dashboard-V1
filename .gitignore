@@ -58,3 +58,9 @@ wheels/
 firebase-debug.log
 .firebaserc.backup
 
+# Firebase Service Account Keys (DO NOT COMMIT)
+backend/service-account.json
+backend/*-firebase-adminsdk-*.json
+backend/.env
+backend/.env.local
+

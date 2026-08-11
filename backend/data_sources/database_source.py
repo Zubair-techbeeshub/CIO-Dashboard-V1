@@ -197,7 +197,7 @@ class DatabaseDataSource(DataSourceBase):
         df = self._execute_query(query, tenant_id)
         return df.to_dict('records')
 
-    async def load_monthly_spend_trend(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+    async def load_spend_trend(self, tenant_id: str = None) -> List[Dict[str, Any]]:
         """Load monthly spend trend from database"""
         query = """
         SELECT

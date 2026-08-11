@@ -16,13 +16,16 @@ const WorkforceSection: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [workforceData, skillsData] = await Promise.all([
+        const [workforceResponse, skillsResponse] = await Promise.all([
           loadWorkforceMetrics(),
           loadSkillDistribution()
         ]);
 
-        setWorkforceMetrics(workforceData);
-        setSkillDistribution(skillsData);
+        console.log('Workforce Metrics Response:', workforceResponse);
+        console.log('Skill Distribution Response:', skillsResponse);
+
+        setWorkforceMetrics(workforceResponse.data || workforceResponse);
+        setSkillDistribution(skillsResponse.data || skillsResponse);
         setLoading(false);
       } catch (error) {
         console.error('Error loading workforce data:', error);
@@ -37,21 +40,25 @@ const WorkforceSection: React.FC = () => {
     return <div className="section">Loading...</div>;
   }
 
+  if (!workforceMetrics || workforceMetrics.length === 0) {
+    return <div className="section">Error loading workforce data</div>;
+  }
+
   // Calculate totals
-  const totalPlannedHours = workforceMetrics.reduce((sum, m) => sum + m.plannedHours, 0);
-  const totalActualHours = workforceMetrics.reduce((sum, m) => sum + m.actualHours, 0);
-  const variancePercent = ((totalActualHours - totalPlannedHours) / totalPlannedHours * 100);
+  const totalPlannedHours = workforceMetrics.reduce((sum, m) => sum + (m.plannedHours || 0), 0);
+  const totalActualHours = workforceMetrics.reduce((sum, m) => sum + (m.actualHours || 0), 0);
+  const variancePercent = totalPlannedHours > 0 ? ((totalActualHours - totalPlannedHours) / totalPlannedHours * 100) : 0;
 
   // Calculate weighted average utilization
   const avgUtilization = totalPlannedHours > 0 
-    ? workforceMetrics.reduce((sum, m) => sum + m.utilizationRate * m.plannedHours, 0) / totalPlannedHours
+    ? workforceMetrics.reduce((sum, m) => sum + (m.utilizationRate || 0) * (m.plannedHours || 0), 0) / totalPlannedHours
     : 0;
 
   // Get FTE and Consultant metrics
-  const fteMetrics = workforceMetrics.filter(m => m.resourceType.includes('FTE'));
+  const fteMetrics = workforceMetrics.filter(m => m.resourceType && m.resourceType.includes('FTE'));
   const consultantMetrics = workforceMetrics.filter(m => m.resourceType === 'Consultants');
-  const totalFTEPositions = fteMetrics.reduce((sum, m) => sum + m.openPositions, 0);
-  const totalConsultantPositions = consultantMetrics.reduce((sum, m) => sum + m.openPositions, 0);
+  const totalFTEPositions = fteMetrics.reduce((sum, m) => sum + (m.openPositions || 0), 0);
+  const totalConsultantPositions = consultantMetrics.reduce((sum, m) => sum + (m.openPositions || 0), 0);
 
 
 
@@ -115,10 +122,10 @@ const WorkforceSection: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {fteMetrics.map((metric) => {
-                const variance = ((metric.actualHours - metric.plannedHours) / metric.plannedHours * 100);
+              {fteMetrics.map((metric, index) => {
+                const variance = metric.plannedHours > 0 ? ((metric.actualHours - metric.plannedHours) / metric.plannedHours * 100) : 0;
                 return (
-                  <tr key={metric.resourceType}>
+                  <tr key={`fte-${index}-${metric.resourceType}`}>
                     <td><strong>{metric.resourceType}</strong></td>
                     <td>{metric.plannedHours.toLocaleString()}</td>
                     <td>{metric.actualHours.toLocaleString()}</td>
@@ -158,10 +165,10 @@ const WorkforceSection: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {consultantMetrics.map((metric) => {
-                const variance = ((metric.actualHours - metric.plannedHours) / metric.plannedHours * 100);
+              {consultantMetrics.map((metric, index) => {
+                const variance = metric.plannedHours > 0 ? ((metric.actualHours - metric.plannedHours) / metric.plannedHours * 100) : 0;
                 return (
-                  <tr key={metric.resourceType}>
+                  <tr key={`consultant-${index}-${metric.resourceType}`}>
                     <td><strong>{metric.resourceType}</strong></td>
                     <td>{metric.plannedHours.toLocaleString()}</td>
                     <td>{metric.actualHours.toLocaleString()}</td>
@@ -198,8 +205,8 @@ const WorkforceSection: React.FC = () => {
               labelStyle={{ color: '#fff' }}
             />
             <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-              {skillDistribution.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              {skillDistribution.map((item, index) => (
+                <Cell key={`skill-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>
           </BarChart>

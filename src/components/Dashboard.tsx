@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Menu, X, Home, Briefcase, Target, Activity, Users, LogOut } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import ExecutiveSummary from './ExecutiveSummary';
 import FinancialSection from './FinancialSection';
 import PortfolioCockpit from './PortfolioCockpit';
 import ProjectSection from './ProjectSection';
 import WorkforceSection from './WorkforceSection';
+import { useAuth } from '../contexts/FirebaseAuthContext';
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('executive');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user, logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const tabs = [
     { id: 'executive', label: 'Executive Summary', icon: Home },
@@ -58,20 +67,19 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="header-right">
             <div className="user-info">
-              <div className="user-avatar">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
+              <div className="user-avatar">A</div>
               <div>
-                <div className="user-name">{user?.name || 'User'}</div>
-                <div className="user-role">{user?.email || ''}</div>
+                <div className="user-name">{user?.email || 'American Logics'}</div>
+                <div className="user-role">CIO Dashboard</div>
               </div>
             </div>
-            <button
+            <button 
               className="logout-button"
-              onClick={logout}
+              onClick={handleLogout}
               title="Logout"
             >
               <LogOut size={20} />
+              <span>Logout</span>
             </button>
           </div>
         </div>

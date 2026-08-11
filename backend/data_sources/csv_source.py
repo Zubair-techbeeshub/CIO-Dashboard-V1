@@ -188,7 +188,22 @@ class CSVDataSource(DataSourceBase):
         df = self._read_csv("skills_distribution.csv", tenant_id)
         return df.to_dict('records')
     
-    async def load_active_incidents(self) -> List[Dict[str, Any]]:
+    async def load_active_incidents(self, tenant_id: str = None) -> List[Dict[str, Any]]:
         """Load active incidents data"""
-        df = self._read_csv("active_incidents.csv")
+        df = self._read_csv("active_incidents.csv", tenant_id)
+        return df.to_dict('records')
+
+    async def load_spend_trend(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load monthly spend trend data"""
+        df = self._read_csv("monthly_spend_trend.csv", tenant_id)
+        return df.to_dict('records')
+
+    async def load_spend_categories(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load spend categories data"""
+        df = self._read_csv("spend_categories.csv", tenant_id)
+        return df.to_dict('records')
+
+    async def load_skills_distribution(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load skills distribution data"""
+        df = self._read_csv("skills_distribution.csv", tenant_id)
         return df.to_dict('records')

@@ -20,17 +20,23 @@ const FinancialSection: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [portfolioData, spendTrendData, spendCatData, workforceData] = await Promise.all([
+        const [portfolioResponse, spendTrendResponse, spendCatResponse, workforceResponse] = await Promise.all([
           loadPortfolioPrograms(),
           loadSpendTrend(),
           loadSpendCategories(),
           loadWorkforceMetrics()
         ]);
 
-        setPortfolioPrograms(portfolioData);
-        setSpendTrend(spendTrendData);
-        setSpendCategories(spendCatData);
-        setWorkforceMetrics(workforceData);
+        console.log('Portfolio Response:', portfolioResponse);
+        console.log('Spend Trend Response:', spendTrendResponse);
+        console.log('Spend Categories Response:', spendCatResponse);
+        console.log('Workforce Response:', workforceResponse);
+
+        // dataService extracts the data field, so use the response directly
+        setPortfolioPrograms(portfolioResponse);
+        setSpendTrend(spendTrendResponse);
+        setSpendCategories(spendCatResponse);
+        setWorkforceMetrics(workforceResponse);
         setLoading(false);
       } catch (error) {
         console.error('Error loading portfolio data:', error);
@@ -45,25 +51,29 @@ const FinancialSection: React.FC = () => {
     return <div className="section">Loading...</div>;
   }
 
+  if (!portfolioPrograms || portfolioPrograms.length === 0) {
+    return <div className="section">Error loading portfolio data</div>;
+  }
+
   // Calculate Portfolio KPIs
   const capitalPrograms = portfolioPrograms.filter(p => p.budgetType === 'Capital');
   const omPrograms = portfolioPrograms.filter(p => p.budgetType === 'O&M');
   
-  const totalCapitalBudget = capitalPrograms.reduce((sum, p) => sum + p.annualBudget, 0);
-  const totalCapitalActual = capitalPrograms.reduce((sum, p) => sum + p.ytdActual, 0);
-  const capitalUtilization = ((totalCapitalActual / totalCapitalBudget) * 100).toFixed(1);
+  const totalCapitalBudget = capitalPrograms.reduce((sum, p) => sum + (p.annualBudget || 0), 0);
+  const totalCapitalActual = capitalPrograms.reduce((sum, p) => sum + (p.ytdActual || 0), 0);
+  const capitalUtilization = totalCapitalBudget > 0 ? ((totalCapitalActual / totalCapitalBudget) * 100).toFixed(1) : '0.0';
   
-  const totalOMBudget = omPrograms.reduce((sum, p) => sum + p.targetYTD, 0);
-  const totalOMActual = omPrograms.reduce((sum, p) => sum + p.ytdActual, 0);
-  const omExpenditure = ((totalOMActual / totalOMBudget) * 100).toFixed(1);
+  const totalOMBudget = omPrograms.reduce((sum, p) => sum + (p.targetYtd || 0), 0);
+  const totalOMActual = omPrograms.reduce((sum, p) => sum + (p.ytdActual || 0), 0);
+  const omExpenditure = totalOMBudget > 0 ? ((totalOMActual / totalOMBudget) * 100).toFixed(1) : '0.0';
 
   // Calculate FTE and Consultant Spend percentages
-  const totalPlannedHours = workforceMetrics.reduce((sum, m) => sum + m.plannedHours, 0);
-  const fteData = workforceMetrics.find(m => m.resourceType.includes('FTE'));
+  const totalPlannedHours = workforceMetrics.reduce((sum, m) => sum + (m.plannedHours || 0), 0);
+  const fteData = workforceMetrics.find(m => m.resourceType && m.resourceType.includes('FTE'));
   const consultantData = workforceMetrics.find(m => m.resourceType === 'Consultants');
   
-  const fteSpendPercent = fteData ? ((fteData.plannedHours / totalPlannedHours) * 100).toFixed(1) : '0';
-  const consultantSpendPercent = consultantData ? ((consultantData.plannedHours / totalPlannedHours) * 100).toFixed(1) : '0';
+  const fteSpendPercent = totalPlannedHours > 0 && fteData ? ((fteData.plannedHours / totalPlannedHours) * 100).toFixed(1) : '0';
+  const consultantSpendPercent = totalPlannedHours > 0 && consultantData ? ((consultantData.plannedHours / totalPlannedHours) * 100).toFixed(1) : '0';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -156,8 +166,8 @@ const FinancialSection: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {portfolioPrograms.map((program) => (
-                  <tr key={program.programName}>
+                {portfolioPrograms.map((program, index) => (
+                  <tr key={`program-${index}-${program.programName}`}>
                     <td><strong>{program.programName}</strong></td>
                     <td>
                       <span style={{
@@ -224,7 +234,7 @@ const FinancialSection: React.FC = () => {
                 fill="#8884d8"
                 dataKey="spend"
               >
-                {spendCategories.map((_, index) => (
+                {spendCategories.map((item, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

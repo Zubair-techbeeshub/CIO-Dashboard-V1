@@ -16,15 +16,20 @@ const ProjectSection: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [projectsData, deliveryData, portfolioData] = await Promise.all([
+        const [projectsResponse, deliveryResponse, portfolioResponse] = await Promise.all([
           loadTechnologyProjects(),
           loadDeliveryPerformance(),
           loadPortfolioPrograms()
         ]);
 
-        setTechnologyProjects(projectsData);
-        setDeliveryPerformance(deliveryData);
-        setPortfolioPrograms(portfolioData);
+        console.log('Technology Projects Response:', projectsResponse);
+        console.log('Delivery Performance Response:', deliveryResponse);
+        console.log('Portfolio Programs Response:', portfolioResponse);
+
+        // The dataService already extracts the data field, so use the response directly
+        setTechnologyProjects(projectsResponse);
+        setDeliveryPerformance(deliveryResponse);
+        setPortfolioPrograms(portfolioResponse);
         setLoading(false);
       } catch (error) {
         console.error('Error loading project data:', error);
@@ -39,10 +44,14 @@ const ProjectSection: React.FC = () => {
     return <div className="section">Loading...</div>;
   }
 
+  if (!technologyProjects || technologyProjects.length === 0) {
+    return <div className="section">Error loading project data</div>;
+  }
+
   // Group projects by domain
-  const opsTechProjects = technologyProjects.filter(p => p.domain === 'Ops Tech' || p.domain === 'Ops Tech');
-  const customerTechProjects = technologyProjects.filter(p => p.domain === 'Customer Tech');
-  const itServicesProjects = technologyProjects.filter(p => p.domain === 'IT Services' || p.domain === 'Security');
+  const opsTechProjects = technologyProjects.filter(p => p.domain && p.domain.includes('Ops Tech'));
+  const customerTechProjects = technologyProjects.filter(p => p.domain && p.domain.includes('Customer Tech'));
+  const itServicesProjects = technologyProjects.filter(p => p.domain && (p.domain.includes('IT Services') || p.domain.includes('Security')));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,13 +95,13 @@ const ProjectSection: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {projects.map((project) => {
-              const variance = project.actual - project.budget;
+            {projects.map((project, index) => {
+              const variance = (project.actual || 0) - (project.budget || 0);
               return (
-                <tr key={project.projectName}>
-                  <td><strong>{project.projectName}</strong></td>
-                  <td>${project.budget}</td>
-                  <td>${project.actual}</td>
+                <tr key={`project-${index}-${project.projectName || index}`}>
+                  <td><strong>{project.projectName || `Project ${index + 1}`}</strong></td>
+                  <td>${project.budget || 0}</td>
+                  <td>${project.actual || 0}</td>
                   <td style={{ color: variance > 0 ? '#ef4444' : '#10b981' }}>
                     {variance > 0 ? '+' : ''}${variance.toFixed(1)}
                   </td>
@@ -104,19 +113,19 @@ const ProjectSection: React.FC = () => {
                       {project.scheduleStatus}
                     </span>
                   </td>
-                  <td>{project.poc}</td>
+                  <td>{project.poc || 'N/A'}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        {program && (
+        {program && program.top3Issues && (
           <>
             <h4 className="mt-4">Top 3 issues</h4>
             <ul className="issues-list">
-              {program.top3Issues.map((issue: string, idx: number) => (
-                <li key={idx}>{issue}</li>
+              {program.top3Issues && program.top3Issues.map((issue: string, idx: number) => (
+                <li key={`issue-${idx}`}>{issue}</li>
               ))}
             </ul>
 
@@ -152,30 +161,30 @@ const ProjectSection: React.FC = () => {
           <div className="card">
             <h4>Milestone achievement rate</h4>
             <p className="card-subtitle">% completed on time</p>
-            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.milestonesOnTime).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
+            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.milestonesOnTime || 0).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
           </div>
 
           <div className="card">
             <h4>Scope change frequency</h4>
             <p className="card-subtitle">Scope changed in last 3 months</p>
-            <div className="card-value">{deliveryPerformance.map(p => p.scopeChanges90Days).reduce((a, b) => a + b, 0)}</div>
+            <div className="card-value">{deliveryPerformance.map(p => p.scopeChanges90Days || 0).reduce((a, b) => a + b, 0)}</div>
           </div>
 
           <div className="card">
             <h4>Hours Burn rate</h4>
             <p className="card-subtitle">Resource hours burn rate (planned vs. actual)</p>
-            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.hoursBurn).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
+            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.hoursBurn || 0).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
           </div>
 
           <div className="card">
             <h4>Budget Burn rate</h4>
-            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.budgetBurn).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
+            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.budgetBurn || 0).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(1) : '0.0'}%</div>
           </div>
 
           <div className="card">
             <h4>Procurement to WA</h4>
             <p className="card-subtitle">Average # of days in creating WA from procurement</p>
-            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.avgDaysProcurementToWA).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(0) : '0'} days</div>
+            <div className="card-value">{deliveryPerformance.length > 0 ? (deliveryPerformance.map(p => p.avgDaysProcurementToWA || 0).reduce((a, b) => a + b, 0) / deliveryPerformance.length).toFixed(0) : '0'} days</div>
           </div>
         </div>
 
@@ -193,25 +202,25 @@ const ProjectSection: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {deliveryPerformance.map((project) => {
-                const isHealthy = project.milestonesOnTime >= 85 && project.budgetBurn <= 70 && project.hoursBurn <= 75;
-                const isAtRisk = project.milestonesOnTime >= 70 || (project.budgetBurn > 70 && project.budgetBurn < 90) || (project.hoursBurn > 75 && project.hoursBurn < 90);
+              {deliveryPerformance.map((project, index) => {
+                const isHealthy = (project.milestonesOnTime || 0) >= 85 && (project.budgetBurn || 0) <= 70 && (project.hoursBurn || 0) <= 75;
+                const isAtRisk = (project.milestonesOnTime || 0) >= 70 || ((project.budgetBurn || 0) > 70 && (project.budgetBurn || 0) < 90) || ((project.hoursBurn || 0) > 75 && (project.hoursBurn || 0) < 90);
                 const health = isHealthy ? 'Green' : isAtRisk ? 'Amber' : 'Red';
                 
                 return (
-                  <tr key={project.project}>
-                    <td><strong>{project.project}</strong></td>
-                    <td style={{ color: project.milestonesOnTime >= 85 ? '#10b981' : project.milestonesOnTime >= 70 ? '#f59e0b' : '#ef4444' }}>
-                      {project.milestonesOnTime}%
+                  <tr key={`delivery-${index}-${project.project || index}`}>
+                    <td><strong>{project.project || `Project ${index + 1}`}</strong></td>
+                    <td style={{ color: (project.milestonesOnTime || 0) >= 85 ? '#10b981' : (project.milestonesOnTime || 0) >= 70 ? '#f59e0b' : '#ef4444' }}>
+                      {project.milestonesOnTime || 0}%
                     </td>
-                    <td>{project.scopeChanges90Days}</td>
-                    <td style={{ color: project.budgetBurn <= 70 ? '#10b981' : project.budgetBurn <= 85 ? '#f59e0b' : '#ef4444' }}>
-                      {project.budgetBurn}%
+                    <td>{project.scopeChanges90Days || 0}</td>
+                    <td style={{ color: (project.budgetBurn || 0) <= 70 ? '#10b981' : (project.budgetBurn || 0) <= 85 ? '#f59e0b' : '#ef4444' }}>
+                      {project.budgetBurn || 0}%
                     </td>
-                    <td style={{ color: project.hoursBurn <= 75 ? '#10b981' : project.hoursBurn <= 85 ? '#f59e0b' : '#ef4444' }}>
-                      {project.hoursBurn}%
+                    <td style={{ color: (project.hoursBurn || 0) <= 75 ? '#10b981' : (project.hoursBurn || 0) <= 85 ? '#f59e0b' : '#ef4444' }}>
+                      {project.hoursBurn || 0}%
                     </td>
-                    <td>{project.avgDaysProcurementToWA} days</td>
+                    <td>{project.avgDaysProcurementToWA || 0} days</td>
                     <td>
                       <span style={{ color: getStatusColor(health), fontSize: '20px', marginRight: '4px' }}>
                         {getStatusIcon(health)}

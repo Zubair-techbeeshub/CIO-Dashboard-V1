@@ -34,6 +34,26 @@ class DataSourceBase(ABC):
     async def load_delivery_performance(self, tenant_id: str = None) -> List[Dict[str, Any]]:
         """Load delivery performance data"""
         pass
+
+    @abstractmethod
+    async def load_spend_trend(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load monthly spend trend data"""
+        pass
+
+    @abstractmethod
+    async def load_spend_categories(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load spend categories data"""
+        pass
+
+    @abstractmethod
+    async def load_skills_distribution(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load skills distribution data"""
+        pass
+
+    @abstractmethod
+    async def load_active_incidents(self, tenant_id: str = None) -> List[Dict[str, Any]]:
+        """Load active incidents data"""
+        pass
     
     def clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean and standardize dataframe"""

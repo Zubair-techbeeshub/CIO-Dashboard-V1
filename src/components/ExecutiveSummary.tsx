@@ -3,7 +3,6 @@ import { TrendingUp, DollarSign, Cloud } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   loadExecutiveSummary,
-  convertExecutiveSummary,
   convertProjectSummary
 } from '../services/dataService';
 
@@ -17,27 +16,43 @@ const ExecutiveSummary: React.FC = () => {
     const loadData = async () => {
       try {
         // Load all data from the executive summary endpoint
-        const execData = await loadExecutiveSummary();
+        const response = await loadExecutiveSummary();
+
+        // dataService extracts response.data, so response is the data object
+        // The data object structure is: { executiveSummary, portfolioPrograms, applicationHealth, ... }
+        // AND executiveSummary contains: { yoyRevenueGrowth, totalITSpend, projectSummary, vulnerabilityTrend, ... }
         
-        // Extract the different data pieces from the response
-        setExecutiveSummary(convertExecutiveSummary(execData));
-        
-        // Create project summary data
+        setExecutiveSummary(response.executiveSummary);
+
+        // Create project summary data - nested inside executiveSummary
+        const execSummary = response.executiveSummary || {};
         const projSummaryData = [
-          { Metric: 'InProgress', Value: execData.projectSummary?.inProgress || 0 },
-          { Metric: 'AtRisk', Value: execData.projectSummary?.atRisk || 0 },
-          { Metric: 'Completed', Value: execData.projectSummary?.completed || 0 }
+          { Metric: 'InProgress', Value: execSummary.projectSummary?.inProgress || 0 },
+          { Metric: 'AtRisk', Value: execSummary.projectSummary?.atRisk || 0 },
+          { Metric: 'Completed', Value: execSummary.projectSummary?.completed || 0 }
         ];
+
+        // The completionTrend is nested inside executiveSummary.projectSummary
+        const completionTrend = execSummary.projectSummary?.completionTrend || [];
         
-        const projTrendData = execData.projectSummary?.completionTrend || [];
-        setProjectSummary(convertProjectSummary(projSummaryData, projTrendData));
+        const projTrendData = completionTrend.map((item: any) => ({
+          month: item.month || item.Month,
+          completed: item.completed || item.Completed
+        }));
         
-        // Set vulnerability trend
-        setVulnerabilityTrend((execData.vulnerabilityTrend || []).map((item: any) => ({
-          month: item.Month || item.month,
-          count: item.Count || item.count
-        })));
+        const convertedProjectSummary = convertProjectSummary(projSummaryData, projTrendData);
+        setProjectSummary(convertedProjectSummary);
+
+        // Set vulnerability trend - nested inside executiveSummary
+        const vulnTrendRaw = execSummary.vulnerabilityTrend || [];
         
+        const vulnTrendData = vulnTrendRaw.map((item: any) => ({
+          month: item.month || item.Month,
+          count: item.count || item.Count
+        }));
+        
+        setVulnerabilityTrend(vulnTrendData);
+
         setLoading(false);
       } catch (error) {
         console.error('Error loading executive summary data:', error);
@@ -154,7 +169,7 @@ const ExecutiveSummary: React.FC = () => {
               contentStyle={{ backgroundColor: '#1f2937', border: 'none' }}
               labelStyle={{ color: '#fff' }}
             />
-            <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="completed" fill="#3b82f6" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

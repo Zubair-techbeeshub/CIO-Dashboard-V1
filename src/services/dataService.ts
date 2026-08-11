@@ -1,4 +1,3 @@
-import Papa from 'papaparse';
 // Get tenant ID from current domain
 function getTenantId(): string {
   const envTenant = import.meta.env.VITE_TENANT_ID;
@@ -9,152 +8,245 @@ function getTenantId(): string {
   return 'american_logics';
 }
 
-// Load CSV file
-async function loadCSV(filename: string): Promise<any[]> {
-  const tenantId = getTenantId();
-  // Use configured API base URL in production, fall back to our API host
-  const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://api.techbeeshub.com';
-  // Ensure no double-slash
-  const base = API_BASE_URL.replace(/\/$/, '');
-  const primary = `${base}/data/tenant_${tenantId}/${filename}`;
-  const fallback = `${base}/data/${tenantId}/${filename}`; // some deployments use /data/{tenant}/
-
-  console.log('Attempting CSV from primary:', primary);
-  let response = await fetch(primary);
-  if (!response.ok) {
-    console.warn('Primary CSV path failed, trying fallback:', fallback, response.status);
-    response = await fetch(fallback);
+// Get API base URL - now defaults to Vite proxy for local development
+function getApiBaseUrl(): string {
+  // If VITE_API_URL is set, use it (for production)
+  // Otherwise use empty string to leverage Vite proxy (for local development)
+  const envApiUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envApiUrl && envApiUrl.trim()) {
+    return envApiUrl.replace(/\/$/, '');
   }
-  if (!response.ok) {
-    throw new Error(`Failed to load ${filename}: ${response.status} ${response.statusText}`);
-  }
-  const csvText = await response.text();
-  console.log('CSV text length:', csvText.length);
-  return new Promise((resolve, reject) => {
-    Papa.parse(csvText, {
-      header: true,
-      dynamicTyping: true,
-      transformHeader: (header) => header.trim(),
-      skipEmptyLines: true,
-      complete: (results) => {
-        console.log('Parsed data for', filename, ':', results.data.length, 'rows');
-        console.log('Fields:', results.meta.fields);
-        if (results.data.length > 0) {
-          console.log('First row:', results.data[0]);
-        }
-        resolve(results.data);
-      },
-      error: reject
-    });
-  });
+  return ''; // Empty string means use Vite proxy
 }
 
-// Data loading functions - Now loading from CSV files directly
+// Global variable to store the token function
+let getTokenFunction: (() => Promise<string | null>) | null = null;
+
+// Function to set the token function (called by AuthContext)
+export function setTokenFunction(fn: () => Promise<string | null>) {
+  getTokenFunction = fn;
+}
+
+// Generic API call function
+async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const API_BASE_URL = getApiBaseUrl();
+  const tenantId = getTenantId();
+  const url = API_BASE_URL ? `${API_BASE_URL}${endpoint}` : endpoint;
+
+  console.log(`API Call: ${url}, Tenant: ${tenantId}`);
+
+  try {
+    // Get Firebase ID token if available
+    let token: string | null = null;
+    if (getTokenFunction) {
+      try {
+        token = await getTokenFunction();
+      } catch (error) {
+        console.log('Error getting Firebase token:', error);
+      }
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Tenant-ID': tenantId,
+      ...options.headers as Record<string, string>,
+    };
+
+    // Add Firebase token to Authorization header if available
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`API Response for ${url}:`, data);
+    return data;
+  } catch (error) {
+    console.error(`API Error for ${url}:`, error);
+    throw error;
+  }
+}
+
+// Data loading functions - Now using backend API
 export async function loadExecutiveSummary() {
-  const data = await loadCSV('executive_summary.csv');
-  const metrics: Record<string, any> = {};
-  data.forEach((row: any) => {
-    metrics[row.Metric] = row.Value;
-  });
-
-  const projData = await loadCSV('project_summary.csv');
-  const projMetrics: Record<string, any> = {};
-  projData.forEach((row: any) => {
-    projMetrics[row.Metric] = row.Value;
-  });
-
-  const completionData = await loadCSV('project_completion_trend.csv');
-  const vulnData = await loadCSV('vulnerability_trend.csv');
-
-  return {
-    yoyRevenueGrowth: metrics.YoYRevenueGrowth || 0,
-    totalITSpend: metrics.TotalITSpend || 0,
-    itSpendAsPercentRevenue: metrics.ITSpendAsPercentRevenue || 0,
-    budgetUtilization: metrics.BudgetUtilization || 0,
-    systemUptime: metrics.SystemUptime || 0,
-    securityIncidentsMoM: metrics.SecurityIncidentsMoM || 0,
-    responseTimeMin: metrics.ResponseTimeMin || 0,
-    cloudSpend: metrics.CloudSpend || 0,
-    cloudCapacityUtilization: metrics.CloudCapacityUtilization || 0,
-    projectSummary: {
-      inProgress: projMetrics.InProgress || 0,
-      atRisk: projMetrics.AtRisk || 0,
-      completed: projMetrics.Completed || 0,
-      completionTrend: completionData.map((row: any) => ({
-        Month: row.Month,
-        Completed: row.Completed
-      }))
-    },
-    vulnerabilityTrend: vulnData.map((row: any) => ({
-      Month: row.Month,
-      Count: row.Count
-    }))
-  };
+  try {
+    const response = await apiCall('/api/dashboard/all');
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading executive summary from API:', error);
+    throw error;
+  }
 }
 
 export async function loadProjectSummary() {
-  const data = await loadCSV('project_summary.csv');
-  return data.map((row: any) => ({
-    Metric: row.Metric,
-    Value: row.Value
-  }));
+  try {
+    const response = await apiCall('/api/dashboard/all');
+    if (response.success && response.data && response.data.projectSummary) {
+      return [
+        { Metric: 'InProgress', Value: response.data.projectSummary.inProgress || 0 },
+        { Metric: 'AtRisk', Value: response.data.projectSummary.atRisk || 0 },
+        { Metric: 'Completed', Value: response.data.projectSummary.completed || 0 }
+      ];
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading project summary from API:', error);
+    throw error;
+  }
 }
 
 export async function loadProjectCompletionTrend() {
-  const data = await loadCSV('project_completion_trend.csv');
-  return data.map((row: any) => ({
-    Month: row.Month,
-    Completed: row.Completed
-  }));
+  try {
+    const response = await apiCall('/api/dashboard/all');
+    if (response.success && response.data && response.data.projectSummary) {
+      return response.data.projectSummary.completionTrend || [];
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading project completion trend from API:', error);
+    throw error;
+  }
 }
 
 export async function loadVulnerabilityTrend() {
-  const data = await loadCSV('vulnerability_trend.csv');
-  return data.map((row: any) => ({
-    Month: row.Month,
-    Count: row.Count
-  }));
+  try {
+    const response = await apiCall('/api/dashboard/all');
+    if (response.success && response.data && response.data.vulnerabilityTrend) {
+      return response.data.vulnerabilityTrend;
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading vulnerability trend from API:', error);
+    throw error;
+  }
 }
 
 export async function loadPortfolioPrograms() {
-  const data = await loadCSV('portfolio_programs.csv');
-  return convertPortfolioPrograms(data);
+  try {
+    const response = await apiCall('/api/portfolio/programs');
+    if (response.success && response.data) {
+      return convertPortfolioPrograms(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading portfolio programs from API:', error);
+    throw error;
+  }
 }
 
 export async function loadApplicationHealth() {
-  const data = await loadCSV('application_health.csv');
-  return convertApplicationHealth(data);
+  try {
+    const response = await apiCall('/api/portfolio/applications');
+    if (response.success && response.data) {
+      return convertApplicationHealth(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading application health from API:', error);
+    throw error;
+  }
 }
 
 export async function loadTechnologyProjects() {
-  const data = await loadCSV('technology_projects.csv');
-  return convertTechnologyProjects(data);
+  try {
+    const response = await apiCall('/api/projects/technology');
+    if (response.success && response.data) {
+      return convertTechnologyProjects(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading technology projects from API:', error);
+    throw error;
+  }
 }
 
 export async function loadWorkforceMetrics() {
-  const data = await loadCSV('workforce_metrics.csv');
-  return convertWorkforceMetrics(data);
+  try {
+    const response = await apiCall('/api/workforce/metrics');
+    if (response.success && response.data) {
+      return convertWorkforceMetrics(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading workforce metrics from API:', error);
+    throw error;
+  }
 }
 
 export async function loadDeliveryPerformance() {
-  const data = await loadCSV('delivery_performance.csv');
-  return convertDeliveryPerformance(data);
+  try {
+    const response = await apiCall('/api/projects/delivery-performance');
+    if (response.success && response.data) {
+      return convertDeliveryPerformance(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading delivery performance from API:', error);
+    throw error;
+  }
 }
 
 export async function loadSpendTrend() {
-  return await loadCSV('monthly_spend_trend.csv');
+  try {
+    const response = await apiCall('/api/portfolio/spend-trend');
+    if (response.success && response.data) {
+      return convertSpendTrend(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading spend trend from API:', error);
+    throw error;
+  }
 }
 
 export async function loadSpendCategories() {
-  return await loadCSV('spend_categories.csv');
+  try {
+    const response = await apiCall('/api/portfolio/spend-categories');
+    if (response.success && response.data) {
+      return convertSpendCategories(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading spend categories from API:', error);
+    throw error;
+  }
 }
 
 export async function loadActiveIncidents() {
-  return await loadCSV('active_incidents.csv');
+  try {
+    const response = await apiCall('/api/dashboard/incidents');
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading active incidents from API:', error);
+    throw error;
+  }
 }
 
 export async function loadSkillDistribution() {
-  return await loadCSV('skills_distribution.csv');
+  try {
+    const response = await apiCall('/api/workforce/skills');
+    if (response.success && response.data) {
+      return convertSkillDistribution(response.data);
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error loading skill distribution from API:', error);
+    throw error;
+  }
 }
 
 // Helper functions to convert API data to component-friendly format
@@ -175,76 +267,99 @@ export function convertExecutiveSummary(data: any) {
 export function convertProjectSummary(summaryData: any[], trendData: any[]) {
   const metrics: Record<string, number> = {};
   summaryData.forEach(item => {
-    metrics[item.Metric] = item.Value;
+    const metric = item.Metric || item.metric;
+    const value = item.Value || item.value;
+    metrics[metric] = value;
   });
   
   return {
-    inProgress: metrics.InProgress || 0,
-    atRisk: metrics.AtRisk || 0,
-    completed: metrics.Completed || 0,
-    completionTrendByMonth: trendData.map(item => ({
-      month: item.Month || item.month,
-      completed: item.Completed || item.completed
-    }))
+    inProgress: metrics.InProgress || metrics.inProgress || 0,
+    atRisk: metrics.AtRisk || metrics.atRisk || 0,
+    completed: metrics.Completed || metrics.completed || 0,
+    completionTrendByMonth: trendData // Already converted in component
   };
 }
 
 export function convertPortfolioPrograms(data: any[]) {
   return data.map(item => ({
-    programName: item['Program Name'],
-    budgetType: item['Budget Type'],
-    annualBudget: item['Annual Budget ($M)'],
-    ytdActual: item['YTD Actual ($M)'],
-    targetYtd: item['Target YTD ($M)'],
-    variance: item['Variance %'] || item['Variance%'] || item.Variance || 0,
-    status: item.Status,
-    poc: item.POC,
-    top3Issues: item.Top3Issues ? item.Top3Issues.split('|').map((s: string) => s.trim()) : []
+    programName: item.programName || item['Program Name'],
+    budgetType: item.budgetType || item['Budget Type'],
+    annualBudget: item.annualBudget || item['Annual Budget ($M)'],
+    ytdActual: item.ytdActual || item['YTD Actual ($M)'],
+    targetYtd: item.targetYtd || item['Target YTD ($M)'],
+    variance: item.variance || item['Variance %'] || item['Variance%'] || item.Variance || 0,
+    status: item.status || item.Status,
+    poc: item.poc || item.POC,
+    top3Issues: item.top3Issues || (item.Top3Issues ? item.Top3Issues.split('|').map((s: string) => s.trim()) : [])
   }));
 }
 
 export function convertApplicationHealth(data: any[]) {
   return data.map(item => ({
-    application: item.Application,
-    domain: item.Domain,
-    availability: item['Availability %'],
-    incidents: item['Incidents (90 Days)'],
-    patchCompliance: item['Patch Compliance %'],
-    status: item.Status,
-    downIncidences3Months: item.DownIncidences3Months
+    application: item.application || item.Application,
+    domain: item.domain || item.Domain,
+    availability: item.availability || item['Availability %'],
+    incidents: item.incidents || item['Incidents (90 Days)'],
+    patchCompliance: item.patchCompliance || item['Patch Compliance %'],
+    status: item.status || item.Status,
+    downIncidences3Months: item.downIncidences3Months || item.DownIncidences3Months
   }));
 }
 
 export function convertTechnologyProjects(data: any[]) {
   return data.map(item => ({
-    domain: item.Domain,
-    projectName: item['Project Name'],
-    budget: item['Budget ($M)'],
-    actual: item['Actual ($M)'],
-    scheduleStatus: item['Schedule Status'],
-    topIssue: item['Top Issue'],
-    poc: item.POC
+    domain: item.domain || item.Domain,
+    projectName: item.projectName || item['Project Name'],
+    budget: item.budget || item['Budget ($M)'],
+    actual: item.actual || item['Actual ($M)'],
+    scheduleStatus: item.scheduleStatus || item['Schedule Status'],
+    topIssue: item.topIssue || item['Top Issue'],
+    poc: item.poc || item.POC
   }));
 }
 
 export function convertWorkforceMetrics(data: any[]) {
   return data.map(item => ({
-    resourceType: item['Resource Type'],
-    plannedHours: item['Planned Hours'],
-    actualHours: item['Actual Hours'],
-    variancePercent: item['Variance %'],
-    openPositions: item['Open Positions'],
-    utilizationRate: item.UtilizationRate
+    resourceType: item.resourceType || item['Resource Type'],
+    plannedHours: item.plannedHours || item['Planned Hours'],
+    actualHours: item.actualHours || item['Actual Hours'],
+    variancePercent: item.variancePercent || item['Variance %'],
+    openPositions: item.openPositions || item['Open Positions'],
+    utilizationRate: item.utilizationRate || item.UtilizationRate
   }));
 }
 
 export function convertDeliveryPerformance(data: any[]) {
   return data.map(item => ({
-    project: item.Project,
-    milestonesOnTime: item['Milestones On-Time %'],
-    scopeChanges90Days: item['Scope Changes (90 Days)'],
-    budgetBurn: item['Budget Burn %'],
-    hoursBurn: item['Hours Burn %'],
-    avgDaysProcurementToWA: item.AvgDaysProcurementToWA
+    project: item.project || item.Project,
+    milestonesOnTime: item.milestonesOnTime || item['Milestones On-Time %'],
+    scopeChanges90Days: item.scopeChanges90Days || item['Scope Changes (90 Days)'],
+    budgetBurn: item.budgetBurn || item['Budget Burn %'],
+    hoursBurn: item.hoursBurn || item['Hours Burn %'],
+    avgDaysProcurementToWA: item.avgDaysProcurementToWA || item.AvgDaysProcurementToWA
+  }));
+}
+
+export function convertSpendTrend(data: any[]) {
+  return data.map(item => ({
+    month: item.month || item.Month,
+    planned: item.planned || item['Planned ($M)'],
+    actual: item.actual || item['Actual ($M)']
+  }));
+}
+
+export function convertSpendCategories(data: any[]) {
+  return data.map(item => ({
+    category: item.category || item['Spend Category'],
+    spend: item.spend || item['Spend ($M)'],
+    percentOfTotal: item.percentOfTotal || item['% of Total'],
+    percentage: item.percentOfTotal || item['% of Total'] // For the chart label
+  }));
+}
+
+export function convertSkillDistribution(data: any[]) {
+  return data.map(item => ({
+    skill: item.skill || item.Skill,
+    count: item.count || item.Count
   }));
 }

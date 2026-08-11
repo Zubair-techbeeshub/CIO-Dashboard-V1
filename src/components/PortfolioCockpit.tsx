@@ -13,13 +13,17 @@ const PortfolioCockpit: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [appHealthData, projectsData] = await Promise.all([
+        const [appHealthResponse, projectsResponse] = await Promise.all([
           loadApplicationHealth(),
           loadTechnologyProjects()
         ]);
 
-        setApplicationHealth(appHealthData);
-        setTechnologyProjects(projectsData);
+        console.log('Application Health Response:', appHealthResponse);
+        console.log('Technology Projects Response:', projectsResponse);
+
+        // The dataService already extracts the data field, so use the response directly
+        setApplicationHealth(appHealthResponse);
+        setTechnologyProjects(projectsResponse);
         setLoading(false);
       } catch (error) {
         console.error('Error loading cockpit data:', error);
@@ -34,17 +38,21 @@ const PortfolioCockpit: React.FC = () => {
     return <div className="section">Loading...</div>;
   }
 
+  if (!applicationHealth || applicationHealth.length === 0) {
+    return <div className="section">Error loading application health data</div>;
+  }
+
   // Calculate critical metrics
   const criticalApps = applicationHealth.filter(app => app.status === 'Red');
   const healthyApps = applicationHealth.filter(app => app.status === 'Green');
-  const avgAvailability = applicationHealth.length > 0 ? (applicationHealth.reduce((sum, app) => sum + app.availability, 0) / applicationHealth.length).toFixed(1) : '0.0';
-  const totalIncidents90Days = applicationHealth.reduce((sum, app) => sum + app.incidents, 0);
-  const avgPatchCompliance = applicationHealth.length > 0 ? (applicationHealth.reduce((sum, app) => sum + app.patchCompliance, 0) / applicationHealth.length).toFixed(1) : '0.0';
-  const totalDownIncidences = applicationHealth.reduce((sum, app) => sum + app.downIncidences3Months, 0);
+  const avgAvailability = applicationHealth.length > 0 ? (applicationHealth.reduce((sum, app) => sum + (app.availability || 0), 0) / applicationHealth.length).toFixed(1) : '0.0';
+  const totalIncidents90Days = applicationHealth.reduce((sum, app) => sum + (app.incidents || 0), 0);
+  const avgPatchCompliance = applicationHealth.length > 0 ? (applicationHealth.reduce((sum, app) => sum + (app.patchCompliance || 0), 0) / applicationHealth.length).toFixed(1) : '0.0';
+  const totalDownIncidences = applicationHealth.reduce((sum, app) => sum + (app.downIncidences3Months || 0), 0);
   
   // Top 3 projects by budget
   const top3Projects = [...technologyProjects]
-    .sort((a, b) => b.budget - a.budget)
+    .sort((a, b) => (b.budget || 0) - (a.budget || 0))
     .slice(0, 3);
 
   // Mock IT Procurement metric
@@ -100,8 +108,8 @@ const PortfolioCockpit: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {applicationHealth.map((app) => (
-                <tr key={app.application}>
+              {applicationHealth.map((app, index) => (
+                <tr key={`app-${index}-${app.application}`}>
                   <td><strong>{app.application}</strong></td>
                   <td>{app.domain}</td>
                   <td>{app.availability}%</td>
@@ -161,16 +169,16 @@ const PortfolioCockpit: React.FC = () => {
             </thead>
             <tbody>
               {applicationHealth
-                .sort((a, b) => b.downIncidences3Months - a.downIncidences3Months)
-                .map((app) => (
-                  <tr key={app.application}>
+                .sort((a, b) => (b.downIncidences3Months || 0) - (a.downIncidences3Months || 0))
+                .map((app, index) => (
+                  <tr key={`down-${index}-${app.application}`}>
                     <td><strong>{app.application}</strong></td>
                     <td>
                       <span style={{ 
-                        color: app.downIncidences3Months > 3 ? '#ef4444' : app.downIncidences3Months > 1 ? '#f59e0b' : '#10b981',
+                        color: (app.downIncidences3Months || 0) > 3 ? '#ef4444' : (app.downIncidences3Months || 0) > 1 ? '#f59e0b' : '#10b981',
                         fontWeight: '600'
                       }}>
-                        {app.downIncidences3Months}
+                        {app.downIncidences3Months || 0}
                       </span>
                     </td>
                     <td>{app.domain}</td>
@@ -208,14 +216,14 @@ const PortfolioCockpit: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {top3Projects.map((project) => {
-                const variance = project.actual - project.budget;
+              {top3Projects.map((project, index) => {
+                const variance = (project.actual || 0) - (project.budget || 0);
                 return (
-                  <tr key={project.projectName}>
+                  <tr key={`top3-${index}-${project.projectName}`}>
                     <td><strong>{project.projectName}</strong></td>
                     <td>{project.domain}</td>
-                    <td>${project.budget}</td>
-                    <td>${project.actual}</td>
+                    <td>${project.budget || 0}</td>
+                    <td>${project.actual || 0}</td>
                     <td style={{ color: variance > 0 ? '#ef4444' : '#10b981' }}>
                       {variance > 0 ? '+' : ''}${variance.toFixed(1)}
                     </td>
@@ -227,7 +235,7 @@ const PortfolioCockpit: React.FC = () => {
                         {project.scheduleStatus}
                       </span>
                     </td>
-                    <td>{project.topIssue}</td>
+                    <td>{project.topIssue || 'None'}</td>
                   </tr>
                 );
               })}
