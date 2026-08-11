@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from data_sources.factory import data_source
-# from auth import get_current_firebase_user  # TEMPORARILY DISABLED FOR DEBUGGING
+from auth import get_current_firebase_user
 
 router = APIRouter()
 
 @router.get("/executive-summary")
-async def get_executive_summary(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_executive_summary(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get executive summary KPIs"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
@@ -15,7 +15,7 @@ async def get_executive_summary(request: Request):  # TEMPORARILY DISABLED: curr
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/all")
-async def get_all_dashboard_data(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_all_dashboard_data(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get all dashboard data in one call"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
@@ -41,7 +41,7 @@ async def get_all_dashboard_data(request: Request):  # TEMPORARILY DISABLED: cur
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/incidents")
-async def get_active_incidents(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_active_incidents(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get active incidents data"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:

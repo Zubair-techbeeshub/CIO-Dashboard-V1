@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from data_sources.factory import data_source
-# from auth import get_current_firebase_user  # TEMPORARILY DISABLED FOR DEBUGGING
+from auth import get_current_firebase_user
 
 router = APIRouter()
 
 @router.get("/programs")
-async def get_portfolio_programs(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_portfolio_programs(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get portfolio programs data"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
@@ -15,7 +15,7 @@ async def get_portfolio_programs(request: Request):  # TEMPORARILY DISABLED: cur
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/applications")
-async def get_application_health(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_application_health(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get application health data"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
@@ -25,7 +25,7 @@ async def get_application_health(request: Request):  # TEMPORARILY DISABLED: cur
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/spend-trend")
-async def get_spend_trend(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_spend_trend(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get monthly spend trend"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
@@ -35,7 +35,7 @@ async def get_spend_trend(request: Request):  # TEMPORARILY DISABLED: current_us
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/spend-categories")
-async def get_spend_categories(request: Request):  # TEMPORARILY DISABLED: current_user: dict = Depends(get_current_firebase_user)
+async def get_spend_categories(request: Request, current_user: dict = Depends(get_current_firebase_user)):
     """Get spend by categories"""
     tenant_id = request.headers.get("X-Tenant-ID", "american_logics")
     try:
