@@ -7,19 +7,19 @@ from dotenv import load_dotenv
 import os
 
 from routers import dashboard, portfolio, workforce, projects
-from firebase_config import initialize_firebase
+# from firebase_config import initialize_firebase  # TEMPORARILY DISABLED FOR DEBUGGING
 # from routers import auth, clients  # DISABLED: Authentication removed
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Firebase Admin SDK
-try:
-    initialize_firebase()
-    print("Firebase Admin SDK initialized successfully")
-except Exception as e:
-    print(f"Warning: Firebase Admin SDK initialization failed: {e}")
-    print("Firebase authentication will not be available")
+# Initialize Firebase Admin SDK - TEMPORARILY DISABLED FOR DEBUGGING
+# try:
+#     initialize_firebase()
+#     print("Firebase Admin SDK initialized successfully")
+# except Exception as e:
+#     print(f"Warning: Firebase Admin SDK initialization failed: {e}")
+#     print("Firebase authentication will not be available")
 
 app = FastAPI(
     title="CIO Dashboard API",
