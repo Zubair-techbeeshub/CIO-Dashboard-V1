@@ -8,7 +8,7 @@ services:
       - key: PORT
         value: 8000
       - key: ALLOWED_ORIGINS
-        value: https://cio-dashboard-app.web.app
+        value: https://cio-dashboard-app.web.app,https://cio-dashboard-app.firebaseapp.com
       - key: DEFAULT_TENANT
         value: american_logics
       - key: FIREBASE_PROJECT_ID
