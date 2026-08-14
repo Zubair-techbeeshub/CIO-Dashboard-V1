@@ -28,19 +28,22 @@ export async function generateSummary(sectionId: string, sectionData?: any): Pro
   const startTime = Date.now();
   
   console.log('[Summary] Generating summary for section:', sectionId);
+  console.log('[Summary] API Base URL:', API_BASE_URL);
   
-  // For now, use local AI-style summaries because OpenAI quota is exceeded.
-  // When a valid AI API key with quota is available, re-enable backend calls below.
-  // Portfolio and cockpit have detailed AI-agent-style summaries.
-  const summary = getFallbackSummary(sectionId);
+  try {
+    const summary = await callBackendForSummary(sectionId, sectionData);
+    console.log('[Summary] Backend summary received:', summary.aiGenerated ? 'AI' : 'Fallback');
+    return summary;
+  } catch (error) {
+    console.warn('[Summary] AI summary failed, using fallback:', error);
+    return getFallbackSummary(sectionId);
+  }
   
   // Ensure minimum loading time for better UX
   const elapsed = Date.now() - startTime;
   if (elapsed < 600) {
     await new Promise(resolve => setTimeout(resolve, 600 - elapsed));
   }
-  
-  return summary;
 }
 
 async function callBackendForSummary(sectionId: string, sectionData?: any): Promise<SectionSummary> {

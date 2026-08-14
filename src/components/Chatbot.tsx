@@ -112,8 +112,8 @@ const Chatbot: React.FC = () => {
         onClick={() => setIsOpen(true)}
         aria-label="Open Portfolio AI Agent"
       >
-        <Bot size={24} />
-        <span>Portfolio AI</span>
+        <MessageCircle size={24} />
+        <span>Ask AI</span>
       </button>
     );
   }
