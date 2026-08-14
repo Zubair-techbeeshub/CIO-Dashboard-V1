@@ -16,22 +16,21 @@ export interface SummarySection {
 /**
  * AI Summary Service
  * 
- * Current implementation uses a local fallback generator that mimics AI output.
- * To use a real AI model (Grok, OpenAI, Anthropic, etc.):
+ * Supports: OpenAI, Grok, Gemini, and local fallback
  * 
  * 1. Add API key to .env:
- *    VITE_AI_PROVIDER=grok  // or openai, anthropic
+ *    VITE_AI_PROVIDER=openai  // or grok, gemini
  *    VITE_AI_API_KEY=your_key
- *    VITE_AI_MODEL=grok-2-1212
+ *    VITE_AI_MODEL=gpt-4      // or gpt-3.5-turbo, grok-2-1212, gemini-1.5-flash
  * 
- * 2. Implement the real API call in fetchAISummary()
+ * 2. Rebuild and deploy
  */
 
 export async function generateSummary(sectionId: string, sectionData?: any): Promise<SectionSummary> {
   const startTime = Date.now();
   
   // Check if AI provider is configured
-  const provider = import.meta.env.VITE_AI_PROVIDER;
+  const provider = import.meta.env.VITE_AI_PROVIDER?.toLowerCase();
   const apiKey = import.meta.env.VITE_AI_API_KEY;
   
   if (provider && apiKey) {
@@ -59,25 +58,47 @@ async function fetchAISummary(
   sectionData?: any
 ): Promise<SectionSummary> {
   const prompt = buildPrompt(sectionId, sectionData);
+  const systemPrompt = 'You are a helpful business analyst. Generate concise, insightful summaries for a CIO dashboard. Use HTML tags like <p>, <ul>, <li>, <strong> for formatting. Focus on actionable insights and key takeaways. Keep it under 250 words.';
   
-  // Grok / xAI API structure
-  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+  let html = '';
+  
+  switch (provider) {
+    case 'openai':
+      html = await callOpenAI(apiKey, systemPrompt, prompt);
+      break;
+    case 'grok':
+    case 'xai':
+      html = await callGrok(apiKey, systemPrompt, prompt);
+      break;
+    case 'gemini':
+    case 'google':
+      html = await callGemini(apiKey, systemPrompt, prompt);
+      break;
+    default:
+      throw new Error(`Unsupported AI provider: ${provider}`);
+  }
+  
+  return {
+    title: getSectionTitle(sectionId),
+    content: <div className="summary-content" dangerouslySetInnerHTML={{ __html: html }} />,
+    rawText: html
+  };
+}
+
+async function callOpenAI(apiKey: string, systemPrompt: string, prompt: string): Promise<string> {
+  const model = import.meta.env.VITE_AI_MODEL || 'gpt-3.5-turbo';
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: import.meta.env.VITE_AI_MODEL || 'grok-2-1212',
+      model: model,
       messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful business analyst. Generate concise, insightful summaries for a CIO dashboard. Use HTML tags like <p>, <ul>, <li>, <strong> for formatting. Focus on actionable insights and key takeaways.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
       ],
       temperature: 0.7,
       max_tokens: 800
@@ -85,17 +106,74 @@ async function fetchAISummary(
   });
   
   if (!response.ok) {
-    throw new Error(`AI API error: ${response.status}`);
+    const error = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
   }
   
   const data = await response.json();
-  const html = data.choices[0]?.message?.content || '';
+  return data.choices[0]?.message?.content || '';
+}
+
+async function callGrok(apiKey: string, systemPrompt: string, prompt: string): Promise<string> {
+  const model = import.meta.env.VITE_AI_MODEL || 'grok-2-1212';
   
-  return {
-    title: getSectionTitle(sectionId),
-    content: <div className="summary-content" dangerouslySetInnerHTML={{ __html: html }} />,
-    rawText: html
-  };
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 800
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Grok API error: ${response.status} - ${error}`);
+  }
+  
+  const data = await response.json();
+  return data.choices[0]?.message?.content || '';
+}
+
+async function callGemini(apiKey: string, systemPrompt: string, prompt: string): Promise<string> {
+  const model = import.meta.env.VITE_AI_MODEL || 'gemini-1.5-flash';
+  
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: `${systemPrompt}\n\n${prompt}` }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 800
+      }
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+  }
+  
+  const data = await response.json();
+  return data.candidates[0]?.content?.parts[0]?.text || '';
 }
 
 function buildPrompt(sectionId: string, sectionData?: any): string {
