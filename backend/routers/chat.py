@@ -114,10 +114,10 @@ def generate_rule_based_response(user_message: str) -> str:
     else:
         return (
             "I can help with portfolio insights. Try asking about:<br><br>"
-            "• <strong>Budget and spend</strong> (e.g., "What's the portfolio budget?")<br>"
-            "• <strong>Risks and at-risk programs</strong> (e.g., "What are the risks?")<br>"
-            "• <strong>Program and application health</strong> (e.g., "How is the portfolio health?")<br>"
-            "• <strong>Strategic recommendations</strong> (e.g., "What should I do next?")<br>"
+            "• <strong>Budget and spend</strong> (e.g., &#8220;What's the portfolio budget?&#8221;)<br>"
+            "• <strong>Risks and at-risk programs</strong> (e.g., &#8220;What are the risks?&#8221;)<br>"
+            "• <strong>Program and application health</strong> (e.g., &#8220;How is the portfolio health?&#8221;)<br>"
+            "• <strong>Strategic recommendations</strong> (e.g., &#8220;What should I do next?&#8221;)<br>"
             "• <strong>Vendors, cybersecurity, customer experience, or technical debt</strong>"
         )
 
