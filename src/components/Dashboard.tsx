@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Menu, X, Home, Briefcase, Target, Activity, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Menu, X, Home, Briefcase, Target, Activity, Users, LogOut, Sparkles } from 'lucide-react';
 import ExecutiveSummary from './ExecutiveSummary';
 import FinancialSection from './FinancialSection';
 import PortfolioCockpit from './PortfolioCockpit';
 import ProjectSection from './ProjectSection';
 import WorkforceSection from './WorkforceSection';
+import SummaryPanel from './SummaryPanel';
 import { useAuth } from '../contexts/FirebaseAuthContext';
+import { generateSummary, SectionSummary, getSectionTitle } from '../services/summaryService';
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('executive');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState<SectionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const { logout, user } = useAuth();
 
   const handleLogout = async () => {
@@ -19,6 +24,24 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const handleSummary = async () => {
+    setSummaryOpen(true);
+    setSummaryLoading(true);
+    try {
+      const summary = await generateSummary(activeTab);
+      setSummaryData(summary);
+    } catch (error) {
+      console.error('Summary error:', error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const handleCloseSummary = () => {
+    setSummaryOpen(false);
+    setSummaryData(null);
   };
 
   const tabs = [
@@ -66,6 +89,14 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="header-right">
+            <button 
+              className="summary-button"
+              onClick={handleSummary}
+              title="Get AI Summary"
+            >
+              <Sparkles size={18} />
+              <span>Summary</span>
+            </button>
             <div className="user-info">
               <div className="user-avatar">A</div>
               <div>
@@ -129,6 +160,16 @@ const Dashboard: React.FC = () => {
           </footer>
         </main>
       </div>
+
+      {/* AI Summary Panel */}
+      <SummaryPanel
+        isOpen={summaryOpen}
+        onClose={handleCloseSummary}
+        title={getSectionTitle(activeTab)}
+        isLoading={summaryLoading}
+      >
+        {summaryData?.content}
+      </SummaryPanel>
     </div>
   );
 };
