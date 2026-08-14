@@ -6,7 +6,7 @@ import re
 from dotenv import load_dotenv
 import os
 
-from routers import dashboard, portfolio, workforce, projects, summary
+from routers import dashboard, portfolio, workforce, projects, summary, chat
 from firebase_config import initialize_firebase
 # from routers import auth, clients  # DISABLED: Authentication removed
 
@@ -63,6 +63,7 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["Portfolio"]
 app.include_router(workforce.router, prefix="/api/workforce", tags=["Workforce"])
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 app.include_router(summary.router, prefix="/api/ai", tags=["AI Summary"])
+app.include_router(chat.router, prefix="/api/ai", tags=["AI Chatbot"])
 # app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])  # DISABLED: Authentication removed
 # app.include_router(clients.router, prefix="/api/admin", tags=["Client Management"])  # DISABLED: Authentication removed
 

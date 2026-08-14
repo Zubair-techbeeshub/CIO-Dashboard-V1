@@ -6,6 +6,7 @@ import PortfolioCockpit from './PortfolioCockpit';
 import ProjectSection from './ProjectSection';
 import WorkforceSection from './WorkforceSection';
 import SummaryPanel from './SummaryPanel';
+import Chatbot from './Chatbot';
 import { useAuth } from '../contexts/FirebaseAuthContext';
 import { generateSummary, SectionSummary, getSectionTitle } from '../services/summaryService';
 
@@ -170,6 +171,9 @@ const Dashboard: React.FC = () => {
       >
         {summaryData?.content}
       </SummaryPanel>
+
+      {/* Portfolio AI Chatbot - Only on portfolio and cockpit pages */}
+      {(activeTab === 'portfolio' || activeTab === 'cockpit') && <Chatbot />}
     </div>
   );
 };
