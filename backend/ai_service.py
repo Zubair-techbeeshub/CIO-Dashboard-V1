@@ -14,20 +14,25 @@ def get_openai_client():
 
 
 def build_summary_prompt(section_id: str, section_title: str, section_data: dict = None) -> str:
-    """Build prompt for dashboard section summary"""
+    """Build prompt for detailed dashboard section summary"""
     data_text = ""
     if section_data:
-        data_text = f"\n\nCurrent dashboard data (JSON):\n{str(section_data)}"
+        data_text = f"\n\nCurrent dashboard data (JSON):\n{str(section_data)[:3000]}"
     
     return (
-        f"Generate an executive summary for the \"{section_title}\" section of a CIO dashboard "
-        f"for a utilities company.{data_text}\n\n"
+        f"Generate a comprehensive, detailed executive summary for the \"{section_title}\" section of a CIO dashboard "
+        f"for a utilities company. The summary is for a Chief Information Officer making strategic decisions.{data_text}\n\n"
         f"Requirements:\n"
-        f"- Use HTML tags like <p>, <ul>, <li>, <strong> for formatting\n"
-        f"- Include 2-3 key insights and 2-3 actionable recommendations\n"
-        f"- Keep it under 250 words\n"
-        f"- Focus on business value and decision-making\n"
-        f"- Do not use markdown, only HTML"
+        f"- Provide 3-5 detailed paragraphs, each focused on a key theme\n"
+        f"- Highlight specific metrics, percentages, numbers, and KPIs from the data\n"
+        f"- Bold all key figures and important percentages using <strong>\n"
+        f"- Include 3-5 key insights, clearly separated\n"
+        f"- Include 3-5 specific, actionable recommendations for the CIO\n"
+        f"- Identify any risks, opportunities, or trends visible in the data\n"
+        f"- Use HTML tags like <h3>, <p>, <ul>, <li>, <strong> for formatting\n"
+        f"- Do not use markdown, only HTML\n"
+        f"- Make it comprehensive and detailed (300-500 words)\n"
+        f"- Be specific and use the actual numbers from the data provided"
     )
 
 
@@ -38,9 +43,11 @@ def generate_section_summary(section_id: str, section_title: str, section_data: 
     model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
     
     system_prompt = (
-        "You are a senior business analyst and CIO advisor. "
-        "Generate concise, insightful executive summaries for a CIO dashboard. "
-        "Use HTML tags for formatting. Be specific, actionable, and professional."
+        "You are a senior business analyst and CIO advisor with 15 years of experience. "
+        "Generate detailed, data-driven executive summaries for a CIO dashboard. "
+        "Always highlight specific metrics, percentages, and numbers. "
+        "Use HTML tags for formatting. Be specific, actionable, and professional. "
+        "Never be vague - always reference concrete data points."
     )
     
     user_prompt = build_summary_prompt(section_id, section_title, section_data)
@@ -53,7 +60,7 @@ def generate_section_summary(section_id: str, section_title: str, section_data: 
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
-            max_tokens=800,
+            max_tokens=1200,
             top_p=0.9
         )
         
