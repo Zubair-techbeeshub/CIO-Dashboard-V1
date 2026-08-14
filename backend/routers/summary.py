@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional
-from ai_service import generate_section_summary, get_fallback_summary
+from ai_service import generate_section_summary
 from data_sources.factory import data_source
 from auth import get_current_firebase_user
 import os
@@ -81,13 +81,20 @@ async def generate_summary(
     
     # Check if AI is configured
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("VITE_AI_API_KEY")
+    print(f"[Summary API] OPENAI_API_KEY present: {bool(api_key)}")
     
     if not api_key:
+        error_html = f"""
+        <h3>⚠️ AI Not Configured</h3>
+        <p>OpenAI API key is missing in the backend environment variables.</p>
+        <p>Please add <code>OPENAI_API_KEY</code> to your Render environment variables and redeploy.</p>
+        <p><strong>Section:</strong> {title}</p>
+        """
         return {
             "success": True,
             "ai_generated": False,
-            "content": get_fallback_summary(summary_request.section),
-            "message": "AI not configured. Using fallback summary."
+            "content": error_html,
+            "message": "OPENAI_API_KEY not configured in backend"
         }
     
     try:
@@ -102,9 +109,15 @@ async def generate_summary(
             "content": content
         }
     except Exception as e:
+        print(f"[Summary API] AI generation error: {str(e)}")
+        error_html = f"""
+        <h3>⚠️ AI Generation Failed</h3>
+        <p>Error: {str(e)}</p>
+        <p>Please check your OpenAI API key and billing status.</p>
+        """
         return {
             "success": True,
             "ai_generated": False,
-            "content": get_fallback_summary(summary_request.section),
+            "content": error_html,
             "message": f"AI generation failed: {str(e)}"
         }
