@@ -112,5 +112,3 @@ export function getSectionTitle(sectionId: string): string {
   };
   return titles[sectionId] || 'Dashboard Summary';
 }
-
-export { getSectionTitle };
