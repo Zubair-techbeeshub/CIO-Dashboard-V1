@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { MessageCircle, X, Send, Bot } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, HelpCircle } from 'lucide-react';
 import './Chatbot.css';
 
 interface Message {
@@ -21,6 +21,15 @@ const Chatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = [
+    "What is the portfolio budget?",
+    "What are the main risks?",
+    "How is the portfolio health?",
+    "What should I do next?",
+    "Which programs are at risk?",
+    "Tell me about technical debt"
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,10 +52,11 @@ const Chatbot: React.FC = () => {
     return null;
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (messageToSend?: string) => {
+    const text = messageToSend || input;
+    if (!text.trim()) return;
 
-    const userMessage = input.trim();
+    const userMessage = text.trim();
     const updatedMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
     setMessages(updatedMessages);
     setInput('');
@@ -99,6 +109,10 @@ const Chatbot: React.FC = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSend(suggestion);
   };
 
   const renderMessage = (content: string) => {
@@ -166,11 +180,31 @@ const Chatbot: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
       
+      <div className="chatbot-suggestions">
+        <div className="chatbot-suggestions-label">
+          <HelpCircle size={14} />
+          <span>Quick questions:</span>
+        </div>
+        <div className="chatbot-suggestions-list">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={index}
+              className="chatbot-suggestion-chip"
+              onClick={() => handleSuggestionClick(suggestion)}
+              disabled={loading}
+              title={suggestion}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+      
       <div className="chatbot-input-area">
         <input
           type="text"
           className="chatbot-input"
-          placeholder="Ask about budget, risks, programs..."
+          placeholder="Or type your own question..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -178,7 +212,7 @@ const Chatbot: React.FC = () => {
         />
         <button 
           className="chatbot-send" 
-          onClick={handleSend}
+          onClick={() => handleSend()}
           disabled={loading || !input.trim()}
           aria-label="Send message"
         >
