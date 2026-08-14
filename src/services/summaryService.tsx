@@ -27,11 +27,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 export async function generateSummary(sectionId: string, sectionData?: any): Promise<SectionSummary> {
   const startTime = Date.now();
   
+  console.log('[Summary] Generating summary for section:', sectionId);
+  console.log('[Summary] API Base URL:', API_BASE_URL);
+  
   try {
     const summary = await callBackendForSummary(sectionId, sectionData);
+    console.log('[Summary] Backend summary received:', summary.aiGenerated ? 'AI' : 'Fallback');
     return summary;
   } catch (error) {
-    console.warn('AI summary failed, using fallback:', error);
+    console.warn('[Summary] AI summary failed, using fallback:', error);
     return getFallbackSummary(sectionId);
   }
   
@@ -67,6 +71,8 @@ async function callBackendForSummary(sectionId: string, sectionData?: any): Prom
     headers['Authorization'] = `Bearer ${token}`;
   }
   
+  console.log('[Summary] Calling backend:', url);
+  
   const response = await fetch(url, {
     method: 'POST',
     headers,
@@ -76,6 +82,8 @@ async function callBackendForSummary(sectionId: string, sectionData?: any): Prom
       data: sectionData || {}
     })
   });
+  
+  console.log('[Summary] Backend response status:', response.status);
   
   if (!response.ok) {
     throw new Error(`Summary API error: ${response.status}`);
