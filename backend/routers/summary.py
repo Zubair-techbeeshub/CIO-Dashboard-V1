@@ -74,6 +74,7 @@ async def generate_summary(
     
     # Fetch real dashboard data
     real_data = await get_section_data(summary_request.section, tenant_id)
+    print(f"[Summary API] Loaded data for section '{summary_request.section}': {len(str(real_data)) if real_data else 0} chars")
     
     # Merge with any data sent from frontend
     combined_data = {**real_data, **(summary_request.data or {})}

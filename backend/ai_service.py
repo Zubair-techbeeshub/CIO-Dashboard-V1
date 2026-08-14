@@ -1,4 +1,5 @@
 import os
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -14,40 +15,62 @@ def get_openai_client():
 
 
 def build_summary_prompt(section_id: str, section_title: str, section_data: dict = None) -> str:
-    """Build prompt for detailed dashboard section summary"""
+    """Build a detailed prompt for dashboard section summary"""
+    
     data_text = ""
     if section_data:
-        data_text = f"\n\nCurrent dashboard data (JSON):\n{str(section_data)[:3000]}"
+        # Convert data to a readable JSON string
+        data_text = f"\n\nCURRENT DASHBOARD DATA (use these exact numbers in your summary):\n{json.dumps(section_data, indent=2, default=str)[:4000]}"
+    else:
+        data_text = "\n\nNo specific dashboard data was provided for this section. Generate a general, comprehensive summary based on the section title."
     
     return (
-        f"Generate a comprehensive, detailed executive summary for the \"{section_title}\" section of a CIO dashboard "
-        f"for a utilities company. The summary is for a Chief Information Officer making strategic decisions.{data_text}\n\n"
-        f"Requirements:\n"
-        f"- Provide 3-5 detailed paragraphs, each focused on a key theme\n"
-        f"- Highlight specific metrics, percentages, numbers, and KPIs from the data\n"
-        f"- Bold all key figures and important percentages using <strong>\n"
-        f"- Include 3-5 key insights, clearly separated\n"
-        f"- Include 3-5 specific, actionable recommendations for the CIO\n"
-        f"- Identify any risks, opportunities, or trends visible in the data\n"
-        f"- Use HTML tags like <h3>, <p>, <ul>, <li>, <strong> for formatting\n"
-        f"- Do not use markdown, only HTML\n"
-        f"- Make it comprehensive and detailed (300-500 words)\n"
-        f"- Be specific and use the actual numbers from the data provided"
+        f"You are writing a detailed executive summary for the \"{section_title}\" section of a CIO dashboard "
+        f"at a utilities company. The audience is the Chief Information Officer who needs actionable insights.{data_text}\n\n"
+        f"INSTRUCTIONS - FOLLOW EXACTLY:\n"
+        f"1. Write at minimum 4 detailed paragraphs (400-600 words total)\n"
+        f"2. ALWAYS reference specific numbers, percentages, and metrics from the data above\n"
+        f"3. Wrap every key metric and percentage in <strong> tags (e.g., <strong>76.3%</strong>)\n"
+        f"4. Include the following sections using <h3> headers:\n"
+        f"   - <h3>📊 Performance Overview</h3>\n"
+        f"   - <h3>🔍 Key Insights</h3> (at least 4 bullet points)\n"
+        f"   - <h3>⚠️ Risks and Opportunities</h3>\n"
+        f"   - <h3>🎯 Strategic Recommendations</h3> (at least 4 actionable items)\n"
+        f"5. Do NOT be vague. Use the exact figures from the data.\n"
+        f"6. Use HTML only. NO Markdown.\n"
+        f"7. Format numbers professionally (e.g., 'budget utilization is <strong>76.3%</strong>')\n"
+        f"8. If a metric is missing or data is empty, state it explicitly rather than guessing.\n"
+        f"\n"
+        f"EXAMPLE OUTPUT FORMAT:\n"
+        f"<h3>📊 Performance Overview</h3>\n"
+        f"<p>The technology portfolio is operating at a strong level overall. Budget utilization stands at <strong>76.3%</strong>, "
+        f"indicating disciplined cost management while leaving headroom for strategic investments. System uptime is <strong>99.7%</strong>, "
+        f"well above industry benchmarks and reflecting robust operational resilience.</p>\n"
+        f"<h3>🔍 Key Insights</h3>\n<ul>\n"
+        f"<li>Revenue growth of <strong>16.2%</strong> year-over-year demonstrates technology investments are supporting business expansion.</li>\n"
+        f"<li>IT spend as a percentage of revenue is <strong>4.1%</strong>, efficient for a utilities company.</li>\n"
+        f"</ul>\n\n"
+        f"Now generate the full summary for the \"{section_title}\" section based on the data provided."
     )
 
 
 def generate_section_summary(section_id: str, section_title: str, section_data: dict = None) -> str:
-    """Generate AI summary for a dashboard section using OpenAI"""
-    client = get_openai_client()
+    """Generate detailed AI summary for a dashboard section using OpenAI"""
     
+    print(f"[AI Summary] Generating for section: {section_id}")
+    print(f"[AI Summary] Data received: {json.dumps(section_data, default=str)[:500] if section_data else 'NONE'}")
+    
+    client = get_openai_client()
     model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
     
     system_prompt = (
-        "You are a senior business analyst and CIO advisor with 15 years of experience. "
-        "Generate detailed, data-driven executive summaries for a CIO dashboard. "
-        "Always highlight specific metrics, percentages, and numbers. "
-        "Use HTML tags for formatting. Be specific, actionable, and professional. "
-        "Never be vague - always reference concrete data points."
+        "You are a senior business analyst, CIO advisor, and expert data interpreter. "
+        "Your task is to generate detailed, data-rich executive summaries for a CIO dashboard. "
+        "You MUST use the actual numbers and percentages provided in the user data. "
+        "Always bold key figures using <strong> tags. "
+        "Write in a professional, executive tone. "
+        "Use HTML only, no markdown. "
+        "Be comprehensive and detailed, not brief."
     )
     
     user_prompt = build_summary_prompt(section_id, section_title, section_data)
@@ -60,11 +83,13 @@ def generate_section_summary(section_id: str, section_title: str, section_data: 
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
-            max_tokens=1200,
+            max_tokens=1500,
             top_p=0.9
         )
         
-        return response.choices[0].message.content or ""
+        content = response.choices[0].message.content or ""
+        print(f"[AI Summary] Generated {len(content)} characters")
+        return content
     except Exception as e:
         raise Exception(f"OpenAI API error: {str(e)}")
 
